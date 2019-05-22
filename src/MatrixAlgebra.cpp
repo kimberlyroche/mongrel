@@ -99,4 +99,3 @@ void tveclmult_minus(const int m, const int n, Ref<MatrixXd> A,
     }
   #endif 
 }
-

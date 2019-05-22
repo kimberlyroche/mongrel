@@ -35,6 +35,18 @@ conjugateLinearModel <- function(Y, X, Theta, Gamma, Xi, upsilon, n_samples = 20
     .Call('_stray_conjugateLinearModel', PACKAGE = 'stray', Y, X, Theta, Gamma, Xi, upsilon, n_samples)
 }
 
+optimLabraduckCollapsed <- function(Y, upsilon, ThetaX, KInv, AInv, init, n_samples = 2000L, calcGradHess = TRUE, b1 = 0.9, b2 = 0.99, step_size = 0.003, epsilon = 10e-7, eps_f = 1e-10, eps_g = 1e-4, max_iter = 10000L, verbose = FALSE, verbose_rate = 10L, decomp_method = "cholesky", optim_method = "adam", eigvalthresh = 0, jitter = 0, multDirichletBoot = -1.0, useSylv = TRUE, ncores = -1L) {
+    .Call('_stray_optimLabraduckCollapsed', PACKAGE = 'stray', Y, upsilon, ThetaX, KInv, AInv, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores)
+}
+
+uncollapseLabraduck <- function(eta, X, Theta, Gamma, Xi, upsilon, seed, ret_mean = FALSE, ncores = -1L) {
+    .Call('_stray_uncollapseLabraduck', PACKAGE = 'stray', eta, X, Theta, Gamma, Xi, upsilon, seed, ret_mean, ncores)
+}
+
+power_G <- function(G, it_begin, it_end) {
+    .Call('_stray_power_G', PACKAGE = 'stray', G, it_begin, it_end)
+}
+
 #' Function to Optimize the Collapsed Maltipoo Model
 #' 
 #' See details for model. Should likely be followed by function 

@@ -22,4 +22,5 @@
 #include "LaplaceApproximation.h"
 #include "PibbleCollapsed.h"
 #include "MaltipooCollapsed.h"
+#include "LabraduckCollapsed.h"
 #include "AdamOptim.h"

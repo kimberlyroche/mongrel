@@ -24,6 +24,72 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// optimLabraduckCollapsed
+List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, const double upsilon, const Eigen::MatrixXd ThetaX, const Eigen::MatrixXd KInv, const Eigen::MatrixXd AInv, Eigen::MatrixXd init, int n_samples, bool calcGradHess, double b1, double b2, double step_size, double epsilon, double eps_f, double eps_g, int max_iter, bool verbose, int verbose_rate, String decomp_method, String optim_method, double eigvalthresh, double jitter, double multDirichletBoot, bool useSylv, int ncores);
+RcppExport SEXP _stray_optimLabraduckCollapsed(SEXP YSEXP, SEXP upsilonSEXP, SEXP ThetaXSEXP, SEXP KInvSEXP, SEXP AInvSEXP, SEXP initSEXP, SEXP n_samplesSEXP, SEXP calcGradHessSEXP, SEXP b1SEXP, SEXP b2SEXP, SEXP step_sizeSEXP, SEXP epsilonSEXP, SEXP eps_fSEXP, SEXP eps_gSEXP, SEXP max_iterSEXP, SEXP verboseSEXP, SEXP verbose_rateSEXP, SEXP decomp_methodSEXP, SEXP optim_methodSEXP, SEXP eigvalthreshSEXP, SEXP jitterSEXP, SEXP multDirichletBootSEXP, SEXP useSylvSEXP, SEXP ncoresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::ArrayXXd >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const double >::type upsilon(upsilonSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type ThetaX(ThetaXSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type KInv(KInvSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type AInv(AInvSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type init(initSEXP);
+    Rcpp::traits::input_parameter< int >::type n_samples(n_samplesSEXP);
+    Rcpp::traits::input_parameter< bool >::type calcGradHess(calcGradHessSEXP);
+    Rcpp::traits::input_parameter< double >::type b1(b1SEXP);
+    Rcpp::traits::input_parameter< double >::type b2(b2SEXP);
+    Rcpp::traits::input_parameter< double >::type step_size(step_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< double >::type eps_f(eps_fSEXP);
+    Rcpp::traits::input_parameter< double >::type eps_g(eps_gSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose_rate(verbose_rateSEXP);
+    Rcpp::traits::input_parameter< String >::type decomp_method(decomp_methodSEXP);
+    Rcpp::traits::input_parameter< String >::type optim_method(optim_methodSEXP);
+    Rcpp::traits::input_parameter< double >::type eigvalthresh(eigvalthreshSEXP);
+    Rcpp::traits::input_parameter< double >::type jitter(jitterSEXP);
+    Rcpp::traits::input_parameter< double >::type multDirichletBoot(multDirichletBootSEXP);
+    Rcpp::traits::input_parameter< bool >::type useSylv(useSylvSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    rcpp_result_gen = Rcpp::wrap(optimLabraduckCollapsed(Y, upsilon, ThetaX, KInv, AInv, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores));
+    return rcpp_result_gen;
+END_RCPP
+}
+// uncollapseLabraduck
+List uncollapseLabraduck(const Eigen::Map<Eigen::VectorXd> eta, const Eigen::Map<Eigen::MatrixXd> X, const Eigen::Map<Eigen::MatrixXd> Theta, const Eigen::Map<Eigen::MatrixXd> Gamma, const Eigen::Map<Eigen::MatrixXd> Xi, const double upsilon, long seed, bool ret_mean, int ncores);
+RcppExport SEXP _stray_uncollapseLabraduck(SEXP etaSEXP, SEXP XSEXP, SEXP ThetaSEXP, SEXP GammaSEXP, SEXP XiSEXP, SEXP upsilonSEXP, SEXP seedSEXP, SEXP ret_meanSEXP, SEXP ncoresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::VectorXd> >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type Theta(ThetaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type Gamma(GammaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type Xi(XiSEXP);
+    Rcpp::traits::input_parameter< const double >::type upsilon(upsilonSEXP);
+    Rcpp::traits::input_parameter< long >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< bool >::type ret_mean(ret_meanSEXP);
+    Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
+    rcpp_result_gen = Rcpp::wrap(uncollapseLabraduck(eta, X, Theta, Gamma, Xi, upsilon, seed, ret_mean, ncores));
+    return rcpp_result_gen;
+END_RCPP
+}
+// power_G
+Eigen::MatrixXd power_G(Eigen::MatrixXd G, int it_begin, int it_end);
+RcppExport SEXP _stray_power_G(SEXP GSEXP, SEXP it_beginSEXP, SEXP it_endSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type G(GSEXP);
+    Rcpp::traits::input_parameter< int >::type it_begin(it_beginSEXP);
+    Rcpp::traits::input_parameter< int >::type it_end(it_endSEXP);
+    rcpp_result_gen = Rcpp::wrap(power_G(G, it_begin, it_end));
+    return rcpp_result_gen;
+END_RCPP
+}
 // optimMaltipooCollapsed
 List optimMaltipooCollapsed(const Eigen::ArrayXXd Y, const double upsilon, const Eigen::MatrixXd Theta, const Eigen::MatrixXd X, const Eigen::MatrixXd KInv, const Eigen::MatrixXd U, Eigen::MatrixXd init, Eigen::VectorXd ellinit, int n_samples, bool calcGradHess, double b1, double b2, double step_size, double epsilon, double eps_f, double eps_g, int max_iter, bool verbose, int verbose_rate, String decomp_method, double eigvalthresh, double jitter);
 RcppExport SEXP _stray_optimMaltipooCollapsed(SEXP YSEXP, SEXP upsilonSEXP, SEXP ThetaSEXP, SEXP XSEXP, SEXP KInvSEXP, SEXP USEXP, SEXP initSEXP, SEXP ellinitSEXP, SEXP n_samplesSEXP, SEXP calcGradHessSEXP, SEXP b1SEXP, SEXP b2SEXP, SEXP step_sizeSEXP, SEXP epsilonSEXP, SEXP eps_fSEXP, SEXP eps_gSEXP, SEXP max_iterSEXP, SEXP verboseSEXP, SEXP verbose_rateSEXP, SEXP decomp_methodSEXP, SEXP eigvalthreshSEXP, SEXP jitterSEXP) {
@@ -382,6 +448,9 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_stray_conjugateLinearModel", (DL_FUNC) &_stray_conjugateLinearModel, 7},
+    {"_stray_optimLabraduckCollapsed", (DL_FUNC) &_stray_optimLabraduckCollapsed, 24},
+    {"_stray_uncollapseLabraduck", (DL_FUNC) &_stray_uncollapseLabraduck, 9},
+    {"_stray_power_G", (DL_FUNC) &_stray_power_G, 3},
     {"_stray_optimMaltipooCollapsed", (DL_FUNC) &_stray_optimMaltipooCollapsed, 22},
     {"_stray_loglikPibbleCollapsed", (DL_FUNC) &_stray_loglikPibbleCollapsed, 7},
     {"_stray_gradPibbleCollapsed", (DL_FUNC) &_stray_gradPibbleCollapsed, 7},
