@@ -112,7 +112,9 @@ image(res_R)
 
 # test random-walk ungapped Kalman filter
 
-T <- 100
+sourceCpp("test.cpp")
+
+T <- 10
 M0 <- matrix(rnorm(5), 2, 5)
 eta <- rmvnorm(T, matrix(rnorm(5), 1, 5), diag(5)) # rows are samples
 
@@ -124,9 +126,8 @@ C0 <- diag(2)
 upsilon <- 7
 Xi <- diag(5)
 
-Sigma_sample <- filter(eta, F, G, W, 1, upsilon, Xi, M0, C0, c(1:T))
-Sigma_sample
-image(Sigma_sample)
+res <- filter(eta, F, G, W, 1, upsilon, Xi, M0, C0, c(1:T))
+image(res)
 
 
 

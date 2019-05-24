@@ -4,6 +4,10 @@
 
 // [[Rcpp::depends(RcppEigen)]]
 
+// note: tensors are available via #include <unsupported/Eigen/CXX11/Tensor>
+// but strictly require compilation with C++11
+// usage: Eigen::Tensor<double, 3> Thetas(system_dim, D, T);
+
 using namespace Rcpp;
 using Eigen::MatrixXd;
 using Eigen::MatrixXcd;
@@ -90,9 +94,12 @@ Eigen::MatrixXd dlm_cov(int T, double gamma, Eigen::VectorXd F, Eigen::MatrixXd 
 Eigen::MatrixXd filter(Eigen::MatrixXd eta, Eigen::VectorXd F, Eigen::MatrixXd G,
                        Eigen::MatrixXd W, double gamma, int upsilon, Eigen::MatrixXd Xi,
                        Eigen::MatrixXd M0, Eigen::MatrixXd C0, Eigen::VectorXi observations) {
-  //int D = eta.cols();
-  //int system_dim = G.cols();
+  //List out(3);
+  //out.names() = CharacterVector::create("Thetas", "upsilon.T", "Xi.T");
+  int D = eta.cols();
+  int system_dim = G.cols();
   int T = observations.maxCoeff(); // we're presuming this exists
+  Eigen::MatrixXd Thetas(system_dim*D, T);
   // init the objects we'll iteratively overwrite where they've got an initial value
   int upsilon_t = upsilon;
   Eigen::MatrixXd Gt = G.transpose();
@@ -101,12 +108,14 @@ Eigen::MatrixXd filter(Eigen::MatrixXd eta, Eigen::VectorXd F, Eigen::MatrixXd G
   Eigen::MatrixXd M_t = M0;
   Eigen::MatrixXd C_t = C0;
   // instantiate the others
-  Eigen::MatrixXd A_t;
-  Eigen::MatrixXd R_t;
-  Eigen::VectorXd ft_t;
+  Eigen::MatrixXd A_t(system_dim, D);
+  Eigen::MatrixXd R_t(system_dim, system_dim);
+  Eigen::MatrixXd ft_t(1, D);
   double q_t;
-  Eigen::VectorXd et_t;
-  Eigen::MatrixXd S_t;
+  Eigen::MatrixXd et_t(1, D);
+  Eigen::VectorXd S_t(system_dim);
+  Eigen::MatrixXd Sigma_t_llt(D, D);
+  Eigen::MatrixXd Theta_t(system_dim, system_dim);
   for(int t=1; t<T; t++) {
     // system prior at t
     A_t = G*M_t;
@@ -119,14 +128,24 @@ Eigen::MatrixXd filter(Eigen::MatrixXd eta, Eigen::VectorXd F, Eigen::MatrixXd G
     S_t = R_t*F/q_t;
     M_t = A_t + S_t*et_t;
     C_t = R_t - q_t*S_t*(S_t.transpose());
+    Eigen::LLT<Eigen::MatrixXd> lltOfCt(C_t);
+    Eigen::MatrixXd LU = lltOfCt.matrixL();
     upsilon_t += 1;
-    Xi += ((et_t.transpose())*et_t)/q_t;
-    // sample as:
-    // Sigma.t <- rinvwishart(1, upsilon.t, Xi.t)[,,1]
-    // Thetas.t[,,t] <- rmatrixnormal(1, M.t, C.t, Sigma.t)[,,1]
+    Xi_t += ((et_t.transpose())*et_t)/q_t;
+    // sample Sigma.t
+    Sigma_t_llt = rInvWishRevCholesky(upsilon_t, Xi_t).matrix();
+    Theta_t = rMatNormalCholesky(M_t, LU, Sigma_t_llt);
+    for(int i=0; i<system_dim; i++) {
+      for(int j=0; j<D; j++) {
+        Thetas((i*system_dim)+j,t-1) = Theta_t(i,j);
+      }
+    }
   }
-  MatrixXd U = rInvWishRevCholesky(upsilon_t, Xi_t);
-  return(U*U.transpose());
+  //out[0] = Thetas;
+  //out[1] = upsilon_t;
+  //out[2] = Xi_t;
+  //return(out);
+  return(Xi_t);
 }
 
 
