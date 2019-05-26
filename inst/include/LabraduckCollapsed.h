@@ -15,7 +15,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
   private:
     const ArrayXXd Y;
     const double upsilon;
-    const MatrixXd ThetaX;
+    const MatrixXd B;
     const MatrixXd KInv;
     const MatrixXd AInv;
     // computed quantities 
@@ -27,7 +27,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     MatrixXd S;  // I_D-1 + KEAE'
     //Eigen::HouseholderQR<MatrixXd> Sdec;
     Eigen::PartialPivLU<MatrixXd> Sdec;
-    MatrixXd E;  // eta-ThetaX
+    MatrixXd E;  // eta-B
     ArrayXXd O;  // exp{eta}
     // only needed for gradient and hessian
     MatrixXd rhomat;
@@ -42,11 +42,11 @@ class LabraduckCollapsed : public Numer::MFuncGrad
   public:
     LabraduckCollapsed(const ArrayXXd Y_,          // constructor
                         const double upsilon_,
-                        const MatrixXd ThetaX_,
+                        const MatrixXd B_,
                         const MatrixXd KInv_,
                         const MatrixXd AInv_, 
                         bool sylv=false) :
-    Y(Y_), upsilon(upsilon_), ThetaX(ThetaX_), KInv(KInv_), AInv(AInv_)
+    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), AInv(AInv_)
     {
       D = Y.rows();           // number of multinomial categories
       N = Y.cols();           // number of samples
@@ -59,7 +59,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     // Update with Eta when it comes in as a vector
     void updateWithEtaLL(const Ref<const VectorXd>& etavec){
       const Map<const MatrixXd> eta(etavec.data(), D-1, N);
-      E = eta - ThetaX;
+      E = eta - B;
       if (sylv & (N < (D-1))){
         S.noalias() = AInv*E.transpose()*KInv*E;
         S.diagonal() += VectorXd::Ones(N);
@@ -132,7 +132,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     MatrixXd calcHess(){
       bool tmp_sylv = sylv;
       if (sylv & (N < (D-1))){
-        MatrixXd eta = E + ThetaX;
+        MatrixXd eta = E + B;
         Map<VectorXd> etavec(eta.data(), N*(D-1));
         this->sylv=false;
         updateWithEtaLL(etavec);

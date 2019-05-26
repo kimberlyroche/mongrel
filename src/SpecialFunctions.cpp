@@ -1,5 +1,17 @@
 #include <Rcpp.h>
+#include <RcppEigen.h>
+#include "MatDist.h"
+
+// [[Rcpp::depends(RcppEigen)]]
+
 using namespace Rcpp;
+
+using Eigen::MatrixXd;
+using Eigen::MatrixXcd;
+using Eigen::VectorXd;
+using Eigen::VectorXcd;
+using Eigen::ArrayXXd;
+using Eigen::Map;
 
 //' Log of Multivarate Gamma Function - Gamma_p(a)
 //' @references https://en.wikipedia.org/wiki/Multivariate_gamma_function
@@ -23,4 +35,88 @@ double lmvgamma_deriv(double a, int p){
     s += R::digamma(a + 0.5*(1-i));
   }
   return s*lmvgamma(a,p);
+}
+
+// explicit references to standard namespace here are motivated by the observation that
+// these calls don't properly resolve on some Windows installs
+// [[Rcpp::export]]
+Eigen::MatrixXd power_G(Eigen::MatrixXd G, 
+                        int it_begin,
+                        int it_end){
+  if(it_begin == it_end) { return(G); }
+  int p = G.rows();
+  int power_it = std::abs(it_end - it_begin) + 1;
+  // powering must explicitly be carried out on complex components (if they exist) using
+  // complex exponents; doesn't look like these a vector wrapper for this; perform
+  // element-wise powering by hand
+  std::complex<double> power_complex(power_it, 0);
+  Eigen::ComplexEigenSolver<MatrixXcd> Gdec(G);
+  VectorXcd powered_eigenvalues = Gdec.eigenvalues();
+  for(int j=0; j<p; j++) {
+    powered_eigenvalues(j) = std::pow(powered_eigenvalues(j), power_complex);
+  }
+  MatrixXcd Lambda = MatrixXcd::Zero(p,p);
+  // use of .diagonal() in assignment doesn't work here for type reasons
+  // troubleshoot this
+  for(int j=0; j<p; j++) {
+    Lambda(j,j) = powered_eigenvalues(j,1);
+  }
+  MatrixXcd reconstituted = Gdec.eigenvectors()*Lambda*(Gdec.eigenvectors().inverse());
+  // in R the imaginary part was occasionally vanishingly non-zero
+  // doesn't seem to happen here but chop it off just in case
+  return reconstituted.real();
+}
+
+// [[Rcpp::export]]
+Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, int T) {
+  int D = M0.cols();
+  Eigen::MatrixXd B(D, T);
+  Eigen::MatrixXd alpha(1, D);
+  for(int t=1; t<=T; t++) {
+    // column-wise
+    alpha = (F.transpose())*power_G(G, t, 1)*M0;
+    B.block(0,t-1,D,1) = alpha.transpose();
+  }
+  return(B);
+}
+
+// build A matrix (covariance over samples) assuming time-invariant parameters F, G, W, gamma
+// [[Rcpp::export]]
+Eigen::MatrixXd dlm_A(int T, double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, bool invert) {
+  // check T >= 1
+  MatrixXd res = MatrixXd::Zero(T,T);
+  MatrixXd Ft = F.transpose();
+  MatrixXd Gt = G.transpose();
+  for(int i=0; i<T; i++) {
+    for(int j=0; j<T; j++) {
+      if(i==j) {
+        int t = j+1;
+        // diagonal
+        res(j,j) += gamma;
+        res(j,j) += (Ft*W*F)(0,0); // 1x1 vector product
+        for(int ell=t; ell>=2; ell--) {
+          res(j,j) += (Ft*power_G(G, t, ell)*W*power_G(Gt, ell, t)*F)(0,0); // 1x1 vector
+        }
+        res(j,j) += (Ft*power_G(G, t, 1)*C0*power_G(Gt, 1, t)*F)(0,0); // 1x1 vector
+      } else {
+        // off-diagonal
+        // symmetric: just copy lower triangular from upper triangular
+        if(i > j) {
+          res(i,j) = res(j,i);
+        } else {
+          int t = j+1;
+          int tk = i+1;
+          res(i,j) += (Ft*power_G(G, t, tk+1)*W*F)(0,0);
+          for(int ell=tk; ell>=2; ell--) {
+            res(i,j) += (Ft*power_G(G, t, ell)*W*power_G(Gt, ell, tk)*F)(0,0);
+          }
+          res(i,j) += (Ft*power_G(G, t, 1)*C0*power_G(Gt, 1, tk)*F)(0,0);
+        }
+      }
+    }
+  }
+  if(invert) {
+    return(res.inverse());
+  }
+  return res;
 }

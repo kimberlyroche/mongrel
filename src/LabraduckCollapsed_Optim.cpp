@@ -13,7 +13,7 @@ using Eigen::VectorXd;
 // [[Rcpp::export]]
 List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, 
                const double upsilon, 
-               const Eigen::MatrixXd ThetaX, 
+               const Eigen::MatrixXd B, 
                const Eigen::MatrixXd KInv, 
                const Eigen::MatrixXd AInv, 
                Eigen::MatrixXd init, 
@@ -43,7 +43,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   timer.step("Overall_start");
   int N = Y.cols();
   int D = Y.rows();
-  LabraduckCollapsed cm(Y, upsilon, ThetaX, KInv, AInv, useSylv);
+  LabraduckCollapsed cm(Y, upsilon, B, KInv, AInv, useSylv);
   Map<VectorXd> eta(init.data(), init.size()); // will rewrite by optim
   double nllopt; // NEGATIVE LogLik at optim
   List out(7);
