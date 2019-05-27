@@ -24,3 +24,4 @@
 #include "MaltipooCollapsed.h"
 #include "LabraduckCollapsed.h"
 #include "AdamOptim.h"
+#include "TimeSeriesFit.h"

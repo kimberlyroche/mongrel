@@ -1,33 +1,42 @@
-
-labraduckfit <- function(D, N, Q, coord_system, iter=NULL,  
+#' Create labraduckfit object 
+labraduckfit <- function(D, N, T, coord_system, iter=NULL,  
                        alr_base=NULL, ilr_base=NULL,
-                       Eta=NULL, Lambda=NULL, Sigma=NULL, Sigma_default=NULL, 
-                       Y=NULL, X=NULL, upsilon=NULL, 
-                       Theta=NULL, Xi=NULL,Xi_default=NULL, Gamma=NULL, 
-                       init=NULL, names_categories=NULL, names_samples=NULL, 
-                       names_covariates=NULL){
-  m <- new_labraduckfit(D, N, Q, coord_system, iter, alr_base, ilr_base,
-                      Eta, Lambda, Sigma, Sigma_default, 
-                      Y, X, upsilon, Theta, Xi,Xi_default, Gamma, 
-                      init, names_categories, names_samples, 
-                      names_covariates)
+                       Eta=NULL, Sigma=NULL, Sigma_default=NULL, 
+                       Y=NULL, upsilon=NULL, Xi=NULL, Xi_default=NULL,
+                       gamma=NULL, F=NULL, G=NULL, W=NULL, M0=NULL, C0=NULL,
+                       observations=NULL,
+                       init=NULL){
+  m <- new_labraduckfit(D, N, T, coord_system, iter, alr_base, ilr_base,
+                      Eta, Sigma, Sigma_default, 
+                      Y, upsilon, Xi, Xi_default,
+                      gamma, F, G, W, M0, C0,
+                      observations,
+                      init)
   verify(m)
   return(m)
 }
 
 
-new_labraduckfit <- function(D, N, Q, coord_system, iter=NULL, 
-                           alr_base=NULL, ilr_base=NULL,
-                           Eta=NULL, Lambda=NULL,Sigma=NULL, Sigma_default=NULL, 
-                           Y=NULL, X=NULL, upsilon=NULL, 
-                           Theta=NULL, Xi=NULL,Xi_default=NULL, Gamma=NULL, 
-                           init=NULL, names_categories=NULL, names_samples=NULL, 
-                           names_covariates=NULL){
-  m <- new_pibblefit(D, N, Q, coord_system, iter, alr_base, ilr_base,
-                      Eta, Lambda, Sigma, Sigma_default, 
-                      Y, X, upsilon, Theta, Xi,Xi_default, Gamma, 
-                      init, deltainit, names_categories, names_samples, 
-                      names_covariates)
+# internal function 
+new_labraduckfit <- function(D, N, T, coord_system, iter=NULL,  
+                       alr_base=NULL, ilr_base=NULL,
+                       Eta=NULL, Sigma=NULL, Sigma_default=NULL, 
+                       Y=NULL, upsilon=NULL, Xi=NULL, Xi_default=NULL,
+                       gamma=NULL, F=NULL, G=NULL, W=NULL, M0=NULL, C0=NULL,
+                       observations=NULL,
+                       init=NULL){
+  m <- new_pibblefit(D, N, Q=0, coord_system, iter, alr_base, ilr_base,
+                      Eta, Lambda=NULL, Sigma, Sigma_default, 
+                      Y, X=NULL, upsilon, Theta=NULL, Xi, Xi_default, Gamma=NULL, 
+                      init, names_categories=NULL, names_samples=NULL, names_covariates=NULL)
+  m$T <- T
+  m$gamma <- gamma
+  m$F <- F
+  m$G <- G
+  m$W <- W
+  m$M0 <- M0
+  m$C0 <- C0
+  m$observations <- observations
   class(m) <- c("labraduckfit", "pibblefit")
 }
 
