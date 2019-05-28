@@ -36,12 +36,12 @@ NULL
 #' @rdname labraduck_fit
 #' @export
 labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, observations,
-                    init=NULL, pars=c("Eta", "Sigma"),
+                    init=NULL, pars=c("Eta", "Sigma", "Thetas_filtered"),
                     ...){
   args <- list(...)
   N <- try_set_dims(c(ncol(Y), args[["N"]]))
   D <- try_set_dims(c(nrow(Y), nrow(Xi)+1, ncol(Xi)+1, args[["D"]]))
-  T <- max(observations)
+  T <- max(observations) # presumed integers!
   if (any(c(N, D) <=0)) stop("N and D must all be greater than 0 (D must be greater than 1)")
   if (D <= 1) stop("D must be greater than 1")
   
@@ -99,20 +99,18 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   useSylv <- args_null("useSylv", args, TRUE)
   ncores <- args_null("ncores", args, -1)
   
-
-  ## precomputation ## 
-  B <- dlm_B(F, G, M0, N)
-  KInv <- solve(Xi)
-  AInv <- dlm_A(N, gamma, F, G, W, C0, TRUE) # this should be using indices in observations!!! (TODO)
-
   # ## fit collapsed model ##
-  fitc <- optimLabraduckCollapsed(Y, upsilon, B, KInv, AInv, init, n_samples, 
+  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, n_samples, 
                                 calcGradHess, b1, b2, step_size, epsilon, eps_f, 
                                 eps_g, max_iter, verbose, verbose_rate, 
                                 decomp_method, optim_method, eigvalthresh, 
                                 jitter, multDirichletBoot, 
                                 useSylv, ncores)
   timerc <- parse_timer_seconds(fitc$Timer)
+
+  out <- list()
+
+  cat("Number of NA samples from eta:",sum(is.na(fitc$Samples)),"\n")
 
   # if n_samples=0 or if hessian fails, then use MAP eta estimate for 
   # uncollapsing and unless otherwise specified against, use only the 
@@ -137,55 +135,59 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   seed <- args_null("seed", args, sample(1:2^15, 1))
   ## uncollapse collapsed model ##
   fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma, upsilon, Xi, M0, C0, observations, ncores=ncores, seed=seed)
-  timeru <- parse_timer_seconds(fitu$Timer)
+  return(list(collapsed=fitc, uncollapsed=fitu))
+  # timeru <- parse_timer_seconds(fitu$Timer)
   
-  timer <- c(timerc, timeru)
-  timer <- timer[which(names(timer)!="Overall")]
-  timer <- c(timer, 
-             "Overall" = unname(timerc["Overall"]) +  unname(timeru["Overall"]), 
-             "Uncollapse_Overall" = timeru["Overall"])
+  # timer <- c(timerc, timeru)
+  # timer <- timer[which(names(timer)!="Overall")]
+  # timer <- c(timer, 
+  #            "Overall" = unname(timerc["Overall"]) +  unname(timeru["Overall"]), 
+  #            "Uncollapse_Overall" = timeru["Overall"])
   
   
-  # # Marginal Likelihood Computation
-  # # d <- D^2 + N*D + D*Q
-  # # logMarginalLikelihood <- fitc$LogLik+d/2*log(2*pi)+.5*fitc$logInvNegHessDet-d/2*log(N)
+  # # # Marginal Likelihood Computation
+  # # # d <- D^2 + N*D + D*Q
+  # # # logMarginalLikelihood <- fitc$LogLik+d/2*log(2*pi)+.5*fitc$logInvNegHessDet-d/2*log(N)
     
   # ## pretty output ##
-  out <- list()
-  if ("Eta" %in% pars){
-    out[["Eta"]] <- fitc$Samples
-  }
-  if ("Sigma" %in% pars){
-    out[["Sigma"]] <- fitu$Sigma
-  }
+  # out <- list()
+  # if ("Eta" %in% pars){
+  #   out[["Eta"]] <- fitc$Samples
+  # }
+  # if ("Thetas_filtered" %in% pars){
+  #   out[["Thetas_filtered"]] <- fitu$Thetas_filtered_sample
+  # }
+  # if ("Sigma" %in% pars){
+  #   out[["Sigma"]] <- fitu$Sigma
+  # }
   
-  # # By default just returns all other parameters
-  out$D <- D
-  out$N <- N
-  out$T <- T
-  out$coord_system <- "alr"
-  out$iter <- dim(fitc$Samples)[3]
-  out$alr_base <- D
-  out$Y <- Y
-  out$upsilon <- upsilon
-  out$gamma <- gamma
-  out$F <- F
-  out$G <- G
-  out$W <- W
-  out$M0 <- M0
-  out$C0 <- C0
-  out$observations <- observations
-  out$B <- B
-  out$AInv <- AInv
-  out$init <- init
-  # # for other methods
-  out$summary <- NULL
-  out$Timer <- timer
-  # #out$logMarginalLikelihood <- logMarginalLikelihood
-  attr(out, "class") <- c("labraduckfit", "pibblefit")
-  # add names if present 
-  if (use_names) out <- name(out)
-  verify(out) # verify the labraduckfit object
+  # # # By default just returns all other parameters
+  # out$D <- D
+  # out$N <- N
+  # out$T <- T
+  # out$coord_system <- "alr"
+  # out$iter <- dim(fitc$Samples)[3]
+  # out$alr_base <- D
+  # out$Y <- Y
+  # out$upsilon <- upsilon
+  # out$gamma <- gamma
+  # out$F <- F
+  # out$G <- G
+  # out$W <- W
+  # out$M0 <- M0
+  # out$C0 <- C0
+  # out$observations <- observations
+  # out$B <- B
+  # out$AInv <- AInv
+  # out$init <- init
+  # # # for other methods
+  # out$summary <- NULL
+  # out$Timer <- timer
+  # # #out$logMarginalLikelihood <- logMarginalLikelihood
+  # attr(out, "class") <- c("labraduckfit", "pibblefit")
+  # # add names if present 
+  # if (use_names) out <- name(out)
+  # verify(out) # verify the labraduckfit object
   return(out)
 }
 

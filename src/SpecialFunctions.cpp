@@ -68,49 +68,61 @@ Eigen::MatrixXd power_G(Eigen::MatrixXd G,
 }
 
 // [[Rcpp::export]]
-Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, int T) {
+Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, Eigen::VectorXd observations) {
   int D = M0.cols();
-  Eigen::MatrixXd B(D, T);
+  int N = observations.size();
+  int T = observations.maxCoeff();
+  Eigen::MatrixXd B(D, N);
   Eigen::MatrixXd alpha(1, D);
-  for(int t=1; t<=T; t++) {
+  int t;
+  for(int t_incr=0; t_incr<observations.size(); t_incr++) {
     // column-wise
+    t = observations(t_incr);
     alpha = (F.transpose())*power_G(G, t, 1)*M0;
-    B.block(0,t-1,D,1) = alpha.transpose();
+    B.block(0,t_incr,D,1) = alpha.transpose();
   }
   return(B);
 }
 
 // build A matrix (covariance over samples) assuming time-invariant parameters F, G, W, gamma
 // [[Rcpp::export]]
-Eigen::MatrixXd dlm_A(int T, double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, bool invert) {
+Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert) {
   // check T >= 1
+  int N = observations.size();
+  int T = observations.maxCoeff();
   MatrixXd res = MatrixXd::Zero(T,T);
   MatrixXd Ft = F.transpose();
   MatrixXd Gt = G.transpose();
-  for(int i=0; i<T; i++) {
-    for(int j=0; j<T; j++) {
-      if(i==j) {
-        int t = j+1;
+  int system_dim = G.rows();
+  int t;
+  int tk;
+  for(int t1_incr=0; t1_incr<observations.size(); t1_incr++) { // cov rows
+    for(int t2_incr=0; t2_incr<observations.size(); t2_incr++) { // cov cols
+      // check this observation exists, else skip this row/col in covariance matrix
+      if(t1_incr == t2_incr) {
+        t = observations(t1_incr);
         // diagonal
-        res(j,j) += gamma;
-        res(j,j) += (Ft*W*F)(0,0); // 1x1 vector product
+        res(t1_incr, t1_incr) += gamma;
+        res(t1_incr, t1_incr) += (Ft*W*F)(0,0); // 1x1 vector product
         for(int ell=t; ell>=2; ell--) {
-          res(j,j) += (Ft*power_G(G, t, ell)*W*power_G(Gt, ell, t)*F)(0,0); // 1x1 vector
+          res(t1_incr, t1_incr) += (Ft*power_G(G, t, ell)*W*power_G(Gt, ell, t)*F)(0,0); // 1x1 vector
         }
-        res(j,j) += (Ft*power_G(G, t, 1)*C0*power_G(Gt, 1, t)*F)(0,0); // 1x1 vector
+        res(t1_incr, t1_incr) += (Ft*power_G(G, t, 1)*C0*power_G(Gt, 1, t)*F)(0,0); // 1x1 vector
       } else {
         // off-diagonal
-        // symmetric: just copy lower triangular from upper triangular
-        if(i > j) {
-          res(i,j) = res(j,i);
+        if(t1_incr > t2_incr) {
+          // symmetric: if you're in the lower triangular portion, just copy from the (already computed) upper triangular
+          res(t1_incr, t2_incr) = res(t2_incr, t1_incr);
         } else {
-          int t = j+1;
-          int tk = i+1;
-          res(i,j) += (Ft*power_G(G, t, tk+1)*W*F)(0,0);
+          t = observations(t2_incr); // col
+          tk = observations(t1_incr); // row
+          res(t1_incr, t2_incr) += (Ft*power_G(G, t, tk+1)*W*F)(0,0);
+          MatrixXd temp = MatrixXd::Zero(system_dim, system_dim);
           for(int ell=tk; ell>=2; ell--) {
-            res(i,j) += (Ft*power_G(G, t, ell)*W*power_G(Gt, ell, tk)*F)(0,0);
+            temp += power_G(G, t, ell)*W*power_G(Gt, ell, tk);
           }
-          res(i,j) += (Ft*power_G(G, t, 1)*C0*power_G(Gt, 1, tk)*F)(0,0);
+          res(t1_incr, t2_incr) += (Ft*temp*F)(0,0);
+          res(t1_incr, t2_incr) += (Ft*power_G(G, t, 1)*C0*power_G(Gt, 1, tk)*F)(0,0);
         }
       }
     }

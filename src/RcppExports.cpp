@@ -25,16 +25,21 @@ BEGIN_RCPP
 END_RCPP
 }
 // optimLabraduckCollapsed
-List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, const double upsilon, const Eigen::MatrixXd B, const Eigen::MatrixXd KInv, const Eigen::MatrixXd AInv, Eigen::MatrixXd init, int n_samples, bool calcGradHess, double b1, double b2, double step_size, double epsilon, double eps_f, double eps_g, int max_iter, bool verbose, int verbose_rate, String decomp_method, String optim_method, double eigvalthresh, double jitter, double multDirichletBoot, bool useSylv, int ncores);
-RcppExport SEXP _stray_optimLabraduckCollapsed(SEXP YSEXP, SEXP upsilonSEXP, SEXP BSEXP, SEXP KInvSEXP, SEXP AInvSEXP, SEXP initSEXP, SEXP n_samplesSEXP, SEXP calcGradHessSEXP, SEXP b1SEXP, SEXP b2SEXP, SEXP step_sizeSEXP, SEXP epsilonSEXP, SEXP eps_fSEXP, SEXP eps_gSEXP, SEXP max_iterSEXP, SEXP verboseSEXP, SEXP verbose_rateSEXP, SEXP decomp_methodSEXP, SEXP optim_methodSEXP, SEXP eigvalthreshSEXP, SEXP jitterSEXP, SEXP multDirichletBootSEXP, SEXP useSylvSEXP, SEXP ncoresSEXP) {
+List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, const double upsilon, const Eigen::MatrixXd Xi, const double gamma, const Eigen::MatrixXd F, const Eigen::MatrixXd G, const Eigen::MatrixXd W, const Eigen::MatrixXd M0, const Eigen::MatrixXd C0, const Eigen::VectorXd observations, Eigen::MatrixXd init, int n_samples, bool calcGradHess, double b1, double b2, double step_size, double epsilon, double eps_f, double eps_g, int max_iter, bool verbose, int verbose_rate, String decomp_method, String optim_method, double eigvalthresh, double jitter, double multDirichletBoot, bool useSylv, int ncores);
+RcppExport SEXP _stray_optimLabraduckCollapsed(SEXP YSEXP, SEXP upsilonSEXP, SEXP XiSEXP, SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP M0SEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP initSEXP, SEXP n_samplesSEXP, SEXP calcGradHessSEXP, SEXP b1SEXP, SEXP b2SEXP, SEXP step_sizeSEXP, SEXP epsilonSEXP, SEXP eps_fSEXP, SEXP eps_gSEXP, SEXP max_iterSEXP, SEXP verboseSEXP, SEXP verbose_rateSEXP, SEXP decomp_methodSEXP, SEXP optim_methodSEXP, SEXP eigvalthreshSEXP, SEXP jitterSEXP, SEXP multDirichletBootSEXP, SEXP useSylvSEXP, SEXP ncoresSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Eigen::ArrayXXd >::type Y(YSEXP);
     Rcpp::traits::input_parameter< const double >::type upsilon(upsilonSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type B(BSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type KInv(KInvSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type AInv(AInvSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type Xi(XiSEXP);
+    Rcpp::traits::input_parameter< const double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type F(FSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type G(GSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type M0(M0SEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type C0(C0SEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd >::type observations(observationsSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type init(initSEXP);
     Rcpp::traits::input_parameter< int >::type n_samples(n_samplesSEXP);
     Rcpp::traits::input_parameter< bool >::type calcGradHess(calcGradHessSEXP);
@@ -54,7 +59,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type multDirichletBoot(multDirichletBootSEXP);
     Rcpp::traits::input_parameter< bool >::type useSylv(useSylvSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    rcpp_result_gen = Rcpp::wrap(optimLabraduckCollapsed(Y, upsilon, B, KInv, AInv, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores));
+    rcpp_result_gen = Rcpp::wrap(optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -348,33 +353,33 @@ BEGIN_RCPP
 END_RCPP
 }
 // dlm_B
-Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, int T);
-RcppExport SEXP _stray_dlm_B(SEXP FSEXP, SEXP GSEXP, SEXP M0SEXP, SEXP TSEXP) {
+Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, Eigen::VectorXd observations);
+RcppExport SEXP _stray_dlm_B(SEXP FSEXP, SEXP GSEXP, SEXP M0SEXP, SEXP observationsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type F(FSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type G(GSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type M0(M0SEXP);
-    Rcpp::traits::input_parameter< int >::type T(TSEXP);
-    rcpp_result_gen = Rcpp::wrap(dlm_B(F, G, M0, T));
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type observations(observationsSEXP);
+    rcpp_result_gen = Rcpp::wrap(dlm_B(F, G, M0, observations));
     return rcpp_result_gen;
 END_RCPP
 }
 // dlm_A
-Eigen::MatrixXd dlm_A(int T, double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, bool invert);
-RcppExport SEXP _stray_dlm_A(SEXP TSEXP, SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP C0SEXP, SEXP invertSEXP) {
+Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert);
+RcppExport SEXP _stray_dlm_A(SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP invertSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type T(TSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type F(FSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type G(GSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type W(WSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type C0(C0SEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type observations(observationsSEXP);
     Rcpp::traits::input_parameter< bool >::type invert(invertSEXP);
-    rcpp_result_gen = Rcpp::wrap(dlm_A(T, gamma, F, G, W, C0, invert));
+    rcpp_result_gen = Rcpp::wrap(dlm_A(gamma, F, G, W, C0, observations, invert));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -482,7 +487,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_stray_conjugateLinearModel", (DL_FUNC) &_stray_conjugateLinearModel, 7},
-    {"_stray_optimLabraduckCollapsed", (DL_FUNC) &_stray_optimLabraduckCollapsed, 24},
+    {"_stray_optimLabraduckCollapsed", (DL_FUNC) &_stray_optimLabraduckCollapsed, 29},
     {"_stray_uncollapseLabraduck", (DL_FUNC) &_stray_uncollapseLabraduck, 12},
     {"_stray_optimMaltipooCollapsed", (DL_FUNC) &_stray_optimMaltipooCollapsed, 22},
     {"_stray_loglikPibbleCollapsed", (DL_FUNC) &_stray_loglikPibbleCollapsed, 7},

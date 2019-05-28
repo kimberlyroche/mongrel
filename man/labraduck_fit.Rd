@@ -6,7 +6,8 @@
 \title{Interface to fit DLM models}
 \usage{
 labraduck(Y = NULL, upsilon = NULL, Xi = NULL, gamma, F, G, W, M0,
-  C0, observations, init = NULL, pars = c("Eta", "Sigma"), ...)
+  C0, observations, init = NULL, pars = c("Eta", "Sigma",
+  "Thetas_filtered"), ...)
 }
 \arguments{
 \item{Y}{D x N matrix of counts (if NULL uses priors only)}

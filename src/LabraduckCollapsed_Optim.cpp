@@ -13,9 +13,14 @@ using Eigen::VectorXd;
 // [[Rcpp::export]]
 List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, 
                const double upsilon, 
-               const Eigen::MatrixXd B, 
-               const Eigen::MatrixXd KInv, 
-               const Eigen::MatrixXd AInv, 
+               const Eigen::MatrixXd Xi,
+               const double gamma,
+               const Eigen::MatrixXd F,
+               const Eigen::MatrixXd G,
+               const Eigen::MatrixXd W,
+               const Eigen::MatrixXd M0,
+               const Eigen::MatrixXd C0,
+               const Eigen::VectorXd observations, 
                Eigen::MatrixXd init, 
                int n_samples=2000, 
                bool calcGradHess = true,
@@ -43,12 +48,18 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   timer.step("Overall_start");
   int N = Y.cols();
   int D = Y.rows();
+
+  // calculate B, AInv
+  MatrixXd B = dlm_B(F, G, M0, observations);
+  MatrixXd KInv = Xi.inverse();
+  MatrixXd AInv = dlm_A(gamma, F, G, W, C0, observations, true);
+
   LabraduckCollapsed cm(Y, upsilon, B, KInv, AInv, useSylv);
   Map<VectorXd> eta(init.data(), init.size()); // will rewrite by optim
   double nllopt; // NEGATIVE LogLik at optim
-  List out(7);
+  List out(9);
   out.names() = CharacterVector::create("LogLik", "Gradient", "Hessian",
-            "Pars", "Samples", "Timer", "logInvNegHessDet");
+            "Pars", "Samples", "Timer", "logInvNegHessDet", "B", "AInv");
   
   // Pick optimizer (ADAM - without perturbation appears to be best)
   //   ADAM with perturbations not fully implemented
@@ -135,5 +146,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   timer.step("Overall_stop");
   NumericVector t(timer);
   out[5] = t;
+  out[7] = B;
+  out[8] = AInv;
   return out;
 }

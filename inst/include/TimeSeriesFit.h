@@ -65,7 +65,7 @@ class TimeSeriesFit
       this->eta = eta;
       T = observations.maxCoeff(); // max observation assuming earliest observation is zero/baseline
       N = eta.rows();              // number of samples
-      D = eta.cols()+1;              // number of multinomial categories minus 1
+      D = eta.cols()+1;            // number of multinomial categories minus 1
       system_dim = G.cols();
       Thetas_filtered = MatrixXd(system_dim*(D-1), T); // single marginal sample at each t
       Rs = MatrixXd(system_dim*system_dim, T);

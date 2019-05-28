@@ -35,8 +35,8 @@ conjugateLinearModel <- function(Y, X, Theta, Gamma, Xi, upsilon, n_samples = 20
     .Call('_stray_conjugateLinearModel', PACKAGE = 'stray', Y, X, Theta, Gamma, Xi, upsilon, n_samples)
 }
 
-optimLabraduckCollapsed <- function(Y, upsilon, B, KInv, AInv, init, n_samples = 2000L, calcGradHess = TRUE, b1 = 0.9, b2 = 0.99, step_size = 0.003, epsilon = 10e-7, eps_f = 1e-10, eps_g = 1e-4, max_iter = 10000L, verbose = FALSE, verbose_rate = 10L, decomp_method = "cholesky", optim_method = "adam", eigvalthresh = 0, jitter = 0, multDirichletBoot = -1.0, useSylv = TRUE, ncores = -1L) {
-    .Call('_stray_optimLabraduckCollapsed', PACKAGE = 'stray', Y, upsilon, B, KInv, AInv, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores)
+optimLabraduckCollapsed <- function(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, n_samples = 2000L, calcGradHess = TRUE, b1 = 0.9, b2 = 0.99, step_size = 0.003, epsilon = 10e-7, eps_f = 1e-10, eps_g = 1e-4, max_iter = 10000L, verbose = FALSE, verbose_rate = 10L, decomp_method = "cholesky", optim_method = "adam", eigvalthresh = 0, jitter = 0, multDirichletBoot = -1.0, useSylv = TRUE, ncores = -1L) {
+    .Call('_stray_optimLabraduckCollapsed', PACKAGE = 'stray', Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores)
 }
 
 uncollapseLabraduck <- function(eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, ncores = -1L) {
@@ -411,12 +411,12 @@ power_G <- function(G, it_begin, it_end) {
     .Call('_stray_power_G', PACKAGE = 'stray', G, it_begin, it_end)
 }
 
-dlm_B <- function(F, G, M0, T) {
-    .Call('_stray_dlm_B', PACKAGE = 'stray', F, G, M0, T)
+dlm_B <- function(F, G, M0, observations) {
+    .Call('_stray_dlm_B', PACKAGE = 'stray', F, G, M0, observations)
 }
 
-dlm_A <- function(T, gamma, F, G, W, C0, invert) {
-    .Call('_stray_dlm_A', PACKAGE = 'stray', T, gamma, F, G, W, C0, invert)
+dlm_A <- function(gamma, F, G, W, C0, observations, invert) {
+    .Call('_stray_dlm_A', PACKAGE = 'stray', gamma, F, G, W, C0, observations, invert)
 }
 
 eigen_lap_test <- function(n_samples, m, S, eigvalthresh) {
