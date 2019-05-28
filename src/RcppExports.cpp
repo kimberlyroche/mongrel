@@ -64,8 +64,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // uncollapseLabraduck
-List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, const Eigen::Map<Eigen::MatrixXd> F, const Eigen::Map<Eigen::MatrixXd> G, const Eigen::Map<Eigen::MatrixXd> W, const double gamma, const int upsilon, const Eigen::Map<Eigen::MatrixXd> Xi, const Eigen::Map<Eigen::MatrixXd> M0, const Eigen::Map<Eigen::MatrixXd> C0, const Eigen::Map<Eigen::VectorXd> observations, long seed, int ncores);
-RcppExport SEXP _stray_uncollapseLabraduck(SEXP etaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP gammaSEXP, SEXP upsilonSEXP, SEXP XiSEXP, SEXP M0SEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP seedSEXP, SEXP ncoresSEXP) {
+List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, const Eigen::Map<Eigen::MatrixXd> F, const Eigen::Map<Eigen::MatrixXd> G, const Eigen::Map<Eigen::MatrixXd> W, const double gamma, const int upsilon, const Eigen::Map<Eigen::MatrixXd> Xi, const Eigen::Map<Eigen::MatrixXd> M0, const Eigen::Map<Eigen::MatrixXd> C0, const Eigen::Map<Eigen::VectorXd> observations, long seed, bool smooth, int ncores);
+RcppExport SEXP _stray_uncollapseLabraduck(SEXP etaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP gammaSEXP, SEXP upsilonSEXP, SEXP XiSEXP, SEXP M0SEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP seedSEXP, SEXP smoothSEXP, SEXP ncoresSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -80,8 +80,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type C0(C0SEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::VectorXd> >::type observations(observationsSEXP);
     Rcpp::traits::input_parameter< long >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< bool >::type smooth(smoothSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    rcpp_result_gen = Rcpp::wrap(uncollapseLabraduck(eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, ncores));
+    rcpp_result_gen = Rcpp::wrap(uncollapseLabraduck(eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, smooth, ncores));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -488,7 +489,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_stray_conjugateLinearModel", (DL_FUNC) &_stray_conjugateLinearModel, 7},
     {"_stray_optimLabraduckCollapsed", (DL_FUNC) &_stray_optimLabraduckCollapsed, 29},
-    {"_stray_uncollapseLabraduck", (DL_FUNC) &_stray_uncollapseLabraduck, 12},
+    {"_stray_uncollapseLabraduck", (DL_FUNC) &_stray_uncollapseLabraduck, 13},
     {"_stray_optimMaltipooCollapsed", (DL_FUNC) &_stray_optimMaltipooCollapsed, 22},
     {"_stray_loglikPibbleCollapsed", (DL_FUNC) &_stray_loglikPibbleCollapsed, 7},
     {"_stray_gradPibbleCollapsed", (DL_FUNC) &_stray_gradPibbleCollapsed, 7},

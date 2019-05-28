@@ -25,6 +25,7 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
                     const Eigen::Map<Eigen::MatrixXd> C0, 
                     const Eigen::Map<Eigen::VectorXd> observations, 
                     long seed, 
+                    bool smooth=false,
                     int ncores=-1){
   #ifdef STRAY_USE_PARALLEL
     Eigen::initParallel();
@@ -39,22 +40,24 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
   // alternatively we could use the mean of eta
   Timer timer;
   timer.step("Overall_start");
-  List out(3);
-  out.names() = CharacterVector::create("Sigma", "Timer", "Thetas_filtered_sample");
+  List out(4);
+  out.names() = CharacterVector::create("Sigma", "Timer", "Thetas_filtered_sample", "Thetas_smoothed_sample");
   int D = Xi.rows()+1;
   int N = observations.size();
   int T = observations.maxCoeff();
   int iter = eta.size()/(N*(D-1)); // assumes result is an integer !!!
   MatrixXd SigmaDraw0((D-1)*(D-1), iter);
   MatrixXd ThetaFilteredDraw0;
-  bool draw_taken = false;
+  MatrixXd ThetaSmoothedDraw0;
+  bool filter_draw_taken = false;
+  bool smoother_draw_taken = false;
 
   //iterate over all draws of eta - embarrassingly parallel with parallel rng
   #ifdef STRAY_USE_PARALLEL
     Eigen::setNbThreads(1);
     //Rcout << "thread: "<< omp_get_max_threads() << std::endl;
   #endif 
-  #pragma omp parallel shared(D, N, SigmaDraw0, ThetaFilteredDraw0, draw_taken)
+  #pragma omp parallel shared(D, N, SigmaDraw0, ThetaFilteredDraw0, filter_draw_taken, ThetaSmoothedDraw0, smoother_draw_taken)
   {
   #ifdef STRAY_USE_PARALLEL
     boost::random::mt19937 rng(omp_get_thread_num()+seed);
@@ -68,15 +71,20 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
     const Map<const MatrixXd> Eta(&eta(i*N*(D-1)),D-1, N); // current sample
     TimeSeriesFit ts(F, G, W, gamma, upsilon, Xi, M0, C0, observations);
     ts.apply_Kalman_filter(Eta.transpose());
-    if(!draw_taken) {
+    if(!filter_draw_taken) {
       // just grab the sampled marginal Thetas for the last iteration
       ThetaFilteredDraw0 = ts.Thetas_filtered;
-      draw_taken = true;
+      filter_draw_taken = true;
     }
     rInvWishRevCholesky_thread_inplace(LSigmaDraw, ts.upsilonT, ts.XiT, rng);
     Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
     Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
     SigmaDraw_tosquare.noalias() = LSigmaDraw*LSigmaDraw.transpose();
+    if(smooth && !smoother_draw_taken) {
+      ts.apply_simulation_smoother();
+      ThetaSmoothedDraw0 = ts.Thetas_simulation_smoothed;
+      smoother_draw_taken = true;
+    }
   }
   }
   #ifdef STRAY_USE_PARALLEL
@@ -95,6 +103,7 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
   NumericVector t(timer);
   out[1] = timer;
   out[2] = ThetaFilteredDraw0;
+  out[3] = ThetaSmoothedDraw0;
   return out;
 }
 

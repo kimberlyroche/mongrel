@@ -161,52 +161,51 @@ class TimeSeriesFit
 
     // assuming time-invariant F, G, W, and gamma
     // need to adapt for time varying parameters (TODO)
-    void apply_simulation_smoother(MatrixXd eta) {
-      if(!filtered) {
-        apply_Kalman_filter(eta);
-      }
-      Thetas_simulation_smoothed = MatrixXd(system_dim*(D-1), T); // single sample over the whole trajectory
-      MatrixXd smoothed_Thetas(system_dim*(D-1), T);
-      MatrixXd LV = rInvWishRevCholesky(upsilonT, XiT).matrix().transpose();
-      // grab M_T
-      MatrixXd M_t = unpack_sample(Ms, system_dim, (D-1), T-1);
-      // grab C_T
-      MatrixXd C_t = unpack_sample(Cs, system_dim, system_dim, T-1);
-      Eigen::LLT<MatrixXd> lltOfCt(C_t);
-      MatrixXd LU = lltOfCt.matrixL();
-      // sample Theta_T
-      MatrixXd smoothed_Theta_t = rMatNormalCholesky(M_t, LU, LV);
-      for(int i=0; i<system_dim; i++) {
-        for(int j=0; j<(D-1); j++) {
-          smoothed_Thetas(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j);
-        }
-      }
-      MatrixXd R_t(system_dim, system_dim);
-      MatrixXd R_t_inv(system_dim, system_dim);
-      MatrixXd Z_t(system_dim, system_dim);
-      MatrixXd A_t(system_dim, D-1);
-      MatrixXd M_t_star(system_dim, D-1);
-      MatrixXd C_t_star(system_dim, system_dim);
-      for(int t=T-1; t>0; t--) {
-        // note to self: 1-indexed loop to 0-indexed data structure
-        R_t = unpack_sample(Rs, system_dim, system_dim, t); // R_t+1
-        R_t_inv = R_t.inverse();
-        M_t = unpack_sample(Ms, system_dim, D-1, t-1);
-        C_t = unpack_sample(Cs, system_dim, system_dim, t-1);
-        Z_t = C_t*(G.transpose())*R_t_inv;
-        A_t = G*M_t;
-        M_t_star = M_t + Z_t*(smoothed_Theta_t - A_t);
-        C_t_star = C_t - Z_t*R_t*(Z_t.transpose());
-        lltOfCt = Eigen::LLT<MatrixXd>(C_t_star); // reuse
-        LU = lltOfCt.matrixL();
-        smoothed_Theta_t = rMatNormalCholesky(M_t_star, LU, LV); // reuse
+    void apply_simulation_smoother() {
+      if(filtered) {
+        Thetas_simulation_smoothed = MatrixXd(system_dim*(D-1), T); // single sample over the whole trajectory
+        MatrixXd smoothed_Thetas(system_dim*(D-1), T);
+        MatrixXd LV = rInvWishRevCholesky(upsilonT, XiT).matrix().transpose();
+        // grab M_T
+        MatrixXd M_t = unpack_sample(Ms, system_dim, (D-1), T-1);
+        // grab C_T
+        MatrixXd C_t = unpack_sample(Cs, system_dim, system_dim, T-1);
+        Eigen::LLT<MatrixXd> lltOfCt(C_t);
+        MatrixXd LU = lltOfCt.matrixL();
+        // sample Theta_T
+        MatrixXd smoothed_Theta_t = rMatNormalCholesky(M_t, LU, LV);
         for(int i=0; i<system_dim; i++) {
           for(int j=0; j<(D-1); j++) {
-            Thetas_simulation_smoothed(i+(j*system_dim),t-1) = smoothed_Theta_t(i,j);
+            smoothed_Thetas(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j);
           }
         }
+        MatrixXd R_t(system_dim, system_dim);
+        MatrixXd R_t_inv(system_dim, system_dim);
+        MatrixXd Z_t(system_dim, system_dim);
+        MatrixXd A_t(system_dim, D-1);
+        MatrixXd M_t_star(system_dim, D-1);
+        MatrixXd C_t_star(system_dim, system_dim);
+        for(int t=T-1; t>0; t--) {
+          // note to self: 1-indexed loop to 0-indexed data structure
+          R_t = unpack_sample(Rs, system_dim, system_dim, t); // R_t+1
+          R_t_inv = R_t.inverse();
+          M_t = unpack_sample(Ms, system_dim, D-1, t-1);
+          C_t = unpack_sample(Cs, system_dim, system_dim, t-1);
+          Z_t = C_t*(G.transpose())*R_t_inv;
+          A_t = G*M_t;
+          M_t_star = M_t + Z_t*(smoothed_Theta_t - A_t);
+          C_t_star = C_t - Z_t*R_t*(Z_t.transpose());
+          lltOfCt = Eigen::LLT<MatrixXd>(C_t_star); // reuse
+          LU = lltOfCt.matrixL();
+          smoothed_Theta_t = rMatNormalCholesky(M_t_star, LU, LV); // reuse
+          for(int i=0; i<system_dim; i++) {
+            for(int j=0; j<(D-1); j++) {
+              Thetas_simulation_smoothed(i+(j*system_dim),t-1) = smoothed_Theta_t(i,j);
+            }
+          }
+        }
+        simulation_smoothed = true;
       }
-      simulation_smoothed = true;
     }
 };
 

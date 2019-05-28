@@ -69,17 +69,18 @@ Eigen::MatrixXd power_G(Eigen::MatrixXd G,
 
 // [[Rcpp::export]]
 Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, Eigen::VectorXd observations) {
-  int D = M0.cols();
+  int D = M0.cols()+1;
   int N = observations.size();
   int T = observations.maxCoeff();
-  Eigen::MatrixXd B(D, N);
-  Eigen::MatrixXd alpha(1, D);
+  MatrixXd B(D-1, N);
+  MatrixXd alpha(1, D);
+  MatrixXd Ft = F.transpose();
   int t;
   for(int t_incr=0; t_incr<observations.size(); t_incr++) {
     // column-wise
     t = observations(t_incr);
-    alpha = (F.transpose())*power_G(G, t, 1)*M0;
-    B.block(0,t_incr,D,1) = alpha.transpose();
+    alpha = Ft*power_G(G, t, 1)*M0;
+    B.block(0,t_incr,D-1,1) = alpha;
   }
   return(B);
 }
@@ -90,7 +91,7 @@ Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen:
   // check T >= 1
   int N = observations.size();
   int T = observations.maxCoeff();
-  MatrixXd res = MatrixXd::Zero(T,T);
+  MatrixXd res = MatrixXd::Zero(N,N);
   MatrixXd Ft = F.transpose();
   MatrixXd Gt = G.transpose();
   int system_dim = G.rows();
