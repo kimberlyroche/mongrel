@@ -5,7 +5,10 @@ library(ggplot2)
 rm(list=ls())
 
 best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
-best_sampled <- c("DUI")
+best_sampled <- c("VAI")
+
+baboon <- "THR"
+full <- TRUE
 
 Q <- 2
 omega <- 2*pi/365
@@ -16,7 +19,8 @@ C0 <- W*10
 gamma <- 1
 smooth <- TRUE
 reference_taxon <- 9 # low count group
-subset_time <- FALSE
+subset_time <- TRUE
+n_samples <- 2000
 
 for(baboon in best_sampled) {
   # for(full in c(FALSE, TRUE)) {
@@ -62,11 +66,10 @@ for(baboon in best_sampled) {
     #                 optim_method="adam", decomp_method="eigen", useSylv=FALSE, smooth=smooth)
     fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                      gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observation=observations,
-                     max_iter=100000, decomp_method="eigen", n_samples=0, ret_mean=TRUE, smooth=smooth)
+                     max_iter=100000, decomp_method="eigen", n_samples=n_samples, ret_mean=FALSE, smooth=smooth)
     sample_no <- 1
   
     # does a sample from Sigma look ok in scale?
-    # fit$Sigma[,,1]
     if(full) {
       png(paste0("C:/Users/kim/Desktop/rules_of_life_stray_run1/plots_full/",baboon,"_Sigma.png"))
       image(fit$Sigma[,,sample_no])
@@ -81,36 +84,69 @@ for(baboon in best_sampled) {
     # these should be similar
     T <- max(observations)
     N <- length(observations)
-    filtered_pts <- numeric(T)
-    smoothed_pts <- numeric(T)
+    filtered_ymin <- rep(Inf, T)
+    filtered_ymax <- rep(-Inf, T)
+    smoothed_ymin <- rep(Inf, T)
+    smoothed_ymax <- rep(-Inf, T)
     Ft <- t(F)
     lr <- driver::alr(t(Y + 0.5))
-    if(full) {
-      lr_idx <- 20
-    } else {
-      lr_idx <- 1
-    }
-    for(t in 1:T) {str
-      Theta_t <- fit$Thetas_filtered[,t] # always returns first sample
-      dim(Theta_t) <- c(Q, D-1) # system_dim x D-1
-      filtered_pts[t] <- (Ft%*%Theta_t)[lr_idx]
+    lr_idx <- 1
+#    if(full) {
+#      lr_idx <- 20
+#    } else {
+#      lr_idx <- 1
+#    }
+    for(s in 1:n_samples) {
+      ThetasF_1T <- fit$Thetas_filtered[,s]
+      dim(ThetasF_1T) <- c(Q, D-1, T)
       if(smooth) {
-        Theta_t <- fit$Thetas_smoothed[,t] # always returns first sample
-        dim(Theta_t) <- c(Q, D-1) # system_dim x D-1
-        smoothed_pts[t] <- (Ft%*%Theta_t)[lr_idx]
+        ThetasS_1T <- fit$Thetas_smoothed[,s]
+        dim(ThetasS_1T) <- c(Q, D-1, T)
+      }
+      for(t in 1:T) {
+        Theta_f_t <- ThetasF_1T[,,t]
+        filtered_pt <- (Ft%*%Theta_f_t)[lr_idx]
+        if(filtered_pt < filtered_ymin[t]) {
+          filtered_ymin[t] <- filtered_pt
+        }
+        if(filtered_pt > filtered_ymax[t]) {
+          filtered_ymax[t] <- filtered_pt
+        }
+        if(smooth) {
+          Theta_s_t <- ThetasS_1T[,,t]
+          smoothed_pt <- (Ft%*%Theta_s_t)[lr_idx]
+          if(smoothed_pt < smoothed_ymin[t]) {
+            smoothed_ymin[t] <- smoothed_pt
+          }
+          if(smoothed_pt > smoothed_ymax[t]) {
+            smoothed_ymax[t] <- smoothed_pt
+          }
+        }
       }
     }
-    # df <- data.frame(timepoint=1:T, which="filtered", value=filtered_pts)
-    df <- data.frame(timepoint=as(observations, "vector"), estimator=rep("alr(Y)", N), value=lr[,lr_idx])
-    df <- rbind(df, data.frame(timepoint=as(observations, "vector"), estimator=rep("eta_hat", N), value=fit$Eta[lr_idx,,sample_no]))
+    df <- data.frame(timepoint=1:T, ymin_f=filtered_ymin, ymax_f=filtered_ymax)
+    df2 <- data.frame(timepoint=as(observations, "vector"), alrY=lr[,lr_idx])
+    df <- merge(df, df2, by='timepoint', all=TRUE)
+    df2 <- data.frame(timepoint=as(observations, "vector"), eta_hat=fit$Eta[lr_idx,,sample_no])
+    df <- merge(df, df2, all=TRUE)
     if(smooth) {
-      df <- rbind(df, data.frame(timepoint=1:T, estimator=rep("smoothed", T), value=smoothed_pts))
+      df2 <- data.frame(timepoint=1:T, ymin_s=smoothed_ymin, ymax_s=smoothed_ymax)
+      df <- merge(df, df2, all=TRUE)
+      p <- ggplot(df, aes(timepoint)) + geom_ribbon(aes(ymin=ymin_f, ymax=ymax_f), fill = "grey90") +
+        geom_ribbon(aes(ymin=ymin_s, ymax=ymax_s), fill = "grey80") +
+        geom_point(aes(x=timepoint, y=alrY)) +
+        geom_point(aes(x=timepoint, y=eta_hat, color="blue")) +
+        theme_minimal()
+    } else {
+      p <- ggplot(df, aes(timepoint)) + geom_ribbon(aes(ymin=ymin_f, ymax=ymax_f), fill = "grey80") +
+        geom_point(aes(x=timepoint, y=alrY)) +
+        geom_point(aes(x=timepoint, y=eta_hat, color="blue")) +
+        theme_minimal()
     }
-    # alternative line (smoothed) and points (alr(Y) and eta_hat) -- not so pretty but might want to return to
-    # p <- ggplot(df, aes(x=timepoint, y=value, which="smoothed")) + geom_line()
-    # p <- p + geom_point(aes(x=timepoint, y=value, color="red"), subset(df, df$which=="alr(Y)"))
-    # p <- p + geom_point(aes(x=timepoint, y=value, color="blue"), subset(df, df$which=="eta_hat"))
-    p <- ggplot(df, aes(x=timepoint, y=value, color=estimator)) + geom_line()
+    p
+    # FILTERING DISTRIBUTION FALLS TOWARD NEGATIVE FOR SOME LOG RATIOS, SOME INDIVIDUALS ONLY???
+    # e.g. THR x 1 versus THR x 25
+    # this definitely has something to do with MORE abundant vs less!!!
     if(full) {
       p <- p + ylab("ALR(Atopobiaceae/Helicobacteraceae)")
     } else {

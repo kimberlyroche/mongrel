@@ -46,19 +46,18 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
   int D = Xi.rows()+1;
   int N = observations.size();
   int T = observations.maxCoeff();
+  int system_dim = G.rows();
   int iter = eta.size()/(N*(D-1)); // assumes result is an integer !!!
   MatrixXd SigmaDraw0((D-1)*(D-1), iter);
-  MatrixXd ThetaFilteredDraw0;
-  MatrixXd ThetaSmoothedDraw0;
-  bool filter_draw_taken = false;
-  bool smoother_draw_taken = false;
+  MatrixXd ThetaFilteredDraw0(system_dim*(D-1)*T, iter);
+  MatrixXd ThetaSmoothedDraw0(system_dim*(D-1)*T, iter);
 
   //iterate over all draws of eta - embarrassingly parallel with parallel rng
   #ifdef STRAY_USE_PARALLEL
     Eigen::setNbThreads(1);
     //Rcout << "thread: "<< omp_get_max_threads() << std::endl;
   #endif 
-  #pragma omp parallel shared(D, N, SigmaDraw0, ThetaFilteredDraw0, filter_draw_taken, ThetaSmoothedDraw0, smoother_draw_taken)
+  #pragma omp parallel shared(D, N, SigmaDraw0, ThetaFilteredDraw0, ThetaSmoothedDraw0)
   {
   #ifdef STRAY_USE_PARALLEL
     boost::random::mt19937 rng(omp_get_thread_num()+seed);
@@ -78,30 +77,22 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
       Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
       Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
       SigmaDraw_tosquare.noalias() = Sigma_mean;
-      // combine these... still just returning one sample
-      if(!filter_draw_taken) {
-        ThetaFilteredDraw0 = ts.Thetas_filtered;
-        filter_draw_taken = true;
-        if(smooth && !smoother_draw_taken) {
-          ts.apply_simulation_smoother();
-          ThetaSmoothedDraw0 = ts.Thetas_simulation_smoothed;
-          smoother_draw_taken = true;
-        }
-      }
+      // skip returning samples of filtered, smoothed Thetas if ret_mean=true (for now)
     } else {
-      if(!filter_draw_taken) {
-        // return (1) SAMPLE of Sigma (2) sample of each t from marginal generated from that Sigma (3) sample from 1:T generated from that Sigma
-        ThetaFilteredDraw0 = ts.Thetas_filtered;
-        filter_draw_taken = true;
-        rInvWishRevCholesky_thread_inplace(LSigmaDraw, ts.upsilonT, ts.XiT, rng);
-        Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
-        Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
-        SigmaDraw_tosquare.noalias() = LSigmaDraw*LSigmaDraw.transpose();
-        if(smooth && !smoother_draw_taken) {
-          ts.apply_simulation_smoother();
-          ThetaSmoothedDraw0 = ts.Thetas_simulation_smoothed;
-          smoother_draw_taken = true;
-        }
+      // need to reshape a 2 x D-1 x T tensor into a columns vector for inclusion as ThetaFilteredDraw0.col(i)
+      // ts.Thetas_filtered is (2 x D-1, T)
+      Eigen::Ref<VectorXd> ThetaFilteredDraw_tmp = ThetaFilteredDraw0.col(i); // this is 2 x D-1 x T
+      Eigen::Map<MatrixXd> ThetaFDraw_tosquare(ThetaFilteredDraw_tmp.data(), system_dim*(D-1), T);
+      ThetaFDraw_tosquare.noalias() = ts.Thetas_filtered;
+      rInvWishRevCholesky_thread_inplace(LSigmaDraw, ts.upsilonT, ts.XiT, rng);
+      Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
+      Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
+      SigmaDraw_tosquare.noalias() = LSigmaDraw*LSigmaDraw.transpose();
+      if(smooth) {
+        ts.apply_simulation_smoother();
+        Eigen::Ref<VectorXd> ThetaSmoothedDraw_tmp = ThetaSmoothedDraw0.col(i); // this is 2 x D-1 x T
+        Eigen::Map<MatrixXd> ThetaSDraw_tosquare(ThetaSmoothedDraw_tmp.data(), system_dim*(D-1), T);
+        ThetaSDraw_tosquare.noalias() = ts.Thetas_simulation_smoothed;
       }
     }
   }

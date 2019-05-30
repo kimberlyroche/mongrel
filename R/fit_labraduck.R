@@ -133,6 +133,9 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   
   seed <- args_null("seed", args, sample(1:2^15, 1))
   ## uncollapse collapsed model ##
+  if(ret_mean)
+    smooth = false;
+  # ret_mean overrides sample returning for now
   fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, smooth=smooth, ncores=ncores)
 
   timeru <- parse_timer_seconds(fitu$Timer)
@@ -153,10 +156,10 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   if ("Eta" %in% pars){
     out[["Eta"]] <- fitc$Samples
   }
-  if ("Thetas_filtered" %in% pars){
+  if ("Thetas_filtered" %in% pars & !ret_mean){
     out[["Thetas_filtered"]] <- fitu$Thetas_filtered_sample
   }
-  if ("Thetas_smoothed" %in% pars){
+  if ("Thetas_smoothed" %in% pars & !ret_mean){
     out[["Thetas_smoothed"]] <- fitu$Thetas_smoothed_sample
   }
   if ("Sigma" %in% pars){
