@@ -39,8 +39,8 @@ optimLabraduckCollapsed <- function(Y, upsilon, Xi, gamma, F, G, W, M0, C0, obse
     .Call('_stray_optimLabraduckCollapsed', PACKAGE = 'stray', Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores)
 }
 
-uncollapseLabraduck <- function(eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, smooth = FALSE, ncores = -1L) {
-    .Call('_stray_uncollapseLabraduck', PACKAGE = 'stray', eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, smooth, ncores)
+uncollapseLabraduck <- function(eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, ret_mean = FALSE, smooth = FALSE, ncores = -1L) {
+    .Call('_stray_uncollapseLabraduck', PACKAGE = 'stray', eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, ret_mean, smooth, ncores)
 }
 
 #' Function to Optimize the Collapsed Maltipoo Model

@@ -5,6 +5,7 @@ library(ggplot2)
 rm(list=ls())
 
 best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
+best_sampled <- c("DUI")
 
 Q <- 2
 omega <- 2*pi/365
@@ -15,9 +16,11 @@ C0 <- W*10
 gamma <- 1
 smooth <- TRUE
 reference_taxon <- 9 # low count group
+subset_time <- FALSE
 
 for(baboon in best_sampled) {
-  for(full in c(FALSE, TRUE)) {
+  # for(full in c(FALSE, TRUE)) {
+  for(full in c(TRUE)) {
     cat("Fitting",baboon,"over all taxa =",full,"...\n")
     if(full) {
       load(paste0("C:/Users/kim/Desktop/temp/",baboon,"_data.RData"))
@@ -28,18 +31,25 @@ for(baboon in best_sampled) {
     Y_full <- indiv_data$ys
     observations_full <- indiv_data$observation_vec
   
-    date_lower_limit <- "2001-10-01"
-    date_upper_limit <- "2002-11-30"
+    if(subset_time) {
+      date_lower_limit <- "2001-10-01"
+      date_upper_limit <- "2002-11-30"
   
-    min_idx <- min(which(names(observations_full) >= date_lower_limit))
-    max_idx <- max(which(names(observations_full) <= date_upper_limit))
+      min_idx <- min(which(names(observations_full) >= date_lower_limit))
+      max_idx <- max(which(names(observations_full) <= date_upper_limit))
   
-    # subset dates
-    Y <- t(Y_full[min_idx:max_idx,])
-    colnames(Y) <- NULL
-    rownames(Y) <- NULL
-    # observations currently requires baseline observation at t=1
-    observations <- matrix(observations_full[min_idx:max_idx], nrow=1) - observations_full[min_idx] + 1
+      # subset dates
+      Y <- t(Y_full[min_idx:max_idx,])
+      colnames(Y) <- NULL
+      rownames(Y) <- NULL
+      # observations currently requires baseline observation at t=1
+      observations <- matrix(observations_full[min_idx:max_idx], nrow=1) - observations_full[min_idx] + 1
+    } else {
+      Y <- t(Y_full)
+      colnames(Y) <- NULL
+      rownames(Y) <- NULL
+      observations <- matrix(observations_full, nrow=1)
+    }
   
     D <- nrow(Y)
     M0 <- matrix(rnorm(Q*(D-1)), Q, D-1)
@@ -52,14 +62,14 @@ for(baboon in best_sampled) {
     #                 optim_method="adam", decomp_method="eigen", useSylv=FALSE, smooth=smooth)
     fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                      gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observation=observations,
-                     max_iter=100000, decomp_method="eigen", smooth=smooth)
+                     max_iter=100000, decomp_method="eigen", n_samples=0, ret_mean=TRUE, smooth=smooth)
     sample_no <- 1
   
     # does a sample from Sigma look ok in scale?
     # fit$Sigma[,,1]
     if(full) {
       png(paste0("C:/Users/kim/Desktop/rules_of_life_stray_run1/plots_full/",baboon,"_Sigma.png"))
-      image(fit$Sigma[,,1])
+      image(fit$Sigma[,,sample_no])
       dev.off()
       # compare to empirical covariance over taxa
       png(paste0("C:/Users/kim/Desktop/rules_of_life_stray_run1/plots_full/",baboon,"_empcov.png"))
@@ -80,7 +90,7 @@ for(baboon in best_sampled) {
     } else {
       lr_idx <- 1
     }
-    for(t in 1:T) {
+    for(t in 1:T) {str
       Theta_t <- fit$Thetas_filtered[,t] # always returns first sample
       dim(Theta_t) <- c(Q, D-1) # system_dim x D-1
       filtered_pts[t] <- (Ft%*%Theta_t)[lr_idx]
@@ -107,8 +117,12 @@ for(baboon in best_sampled) {
       p <- p + ylab("ALR(Bifidobacteriaceae/Helicobacteraceae)")
     }
     if(full) {
+      width <- 8
+      if(subset_time) {
+        width <- 5
+      }
       ggsave(filename=paste0("C:/Users/kim/Desktop/rules_of_life_stray_run1/plots_full/",baboon,"_Theta_smoothed.png"),
-                             units="in", scale=2, width=5, height=2)
+                             units="in", scale=2, width=width, height=2)
     } else {
       ggsave(filename=paste0("C:/Users/kim/Desktop/rules_of_life_stray_run1/plots_subset/",baboon,"_Theta_smoothed.png"),
                              units="in", scale=2, width=5, height=2)

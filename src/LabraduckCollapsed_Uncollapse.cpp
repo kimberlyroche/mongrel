@@ -25,6 +25,7 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
                     const Eigen::Map<Eigen::MatrixXd> C0, 
                     const Eigen::Map<Eigen::VectorXd> observations, 
                     long seed, 
+                    bool ret_mean=false,
                     bool smooth=false,
                     int ncores=-1){
   #ifdef STRAY_USE_PARALLEL
@@ -71,19 +72,37 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
     const Map<const MatrixXd> Eta(&eta(i*N*(D-1)),D-1, N); // current sample
     TimeSeriesFit ts(F, G, W, gamma, upsilon, Xi, M0, C0, observations);
     ts.apply_Kalman_filter(Eta.transpose());
-    if(!filter_draw_taken) {
-      // just grab the sampled marginal Thetas for the last iteration
-      ThetaFilteredDraw0 = ts.Thetas_filtered;
-      filter_draw_taken = true;
-    }
-    rInvWishRevCholesky_thread_inplace(LSigmaDraw, ts.upsilonT, ts.XiT, rng);
-    Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
-    Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
-    SigmaDraw_tosquare.noalias() = LSigmaDraw*LSigmaDraw.transpose();
-    if(smooth && !smoother_draw_taken) {
-      ts.apply_simulation_smoother();
-      ThetaSmoothedDraw0 = ts.Thetas_simulation_smoothed;
-      smoother_draw_taken = true;
+    if(ret_mean) {
+      // return (1) mean of Sigma (2) sample of each t from marginal (3) sample from 1:T
+      MatrixXd Sigma_mean = ts.XiT/(ts.upsilonT - D - 1);
+      Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
+      Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
+      SigmaDraw_tosquare.noalias() = Sigma_mean;
+      // combine these... still just returning one sample
+      if(!filter_draw_taken) {
+        ThetaFilteredDraw0 = ts.Thetas_filtered;
+        filter_draw_taken = true;
+        if(smooth && !smoother_draw_taken) {
+          ts.apply_simulation_smoother();
+          ThetaSmoothedDraw0 = ts.Thetas_simulation_smoothed;
+          smoother_draw_taken = true;
+        }
+      }
+    } else {
+      if(!filter_draw_taken) {
+        // return (1) SAMPLE of Sigma (2) sample of each t from marginal generated from that Sigma (3) sample from 1:T generated from that Sigma
+        ThetaFilteredDraw0 = ts.Thetas_filtered;
+        filter_draw_taken = true;
+        rInvWishRevCholesky_thread_inplace(LSigmaDraw, ts.upsilonT, ts.XiT, rng);
+        Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
+        Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
+        SigmaDraw_tosquare.noalias() = LSigmaDraw*LSigmaDraw.transpose();
+        if(smooth && !smoother_draw_taken) {
+          ts.apply_simulation_smoother();
+          ThetaSmoothedDraw0 = ts.Thetas_simulation_smoothed;
+          smoother_draw_taken = true;
+        }
+      }
     }
   }
   }

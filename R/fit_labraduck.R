@@ -133,7 +133,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   
   seed <- args_null("seed", args, sample(1:2^15, 1))
   ## uncollapse collapsed model ##
-  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed=seed, smooth=smooth, ncores=ncores)
+  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, smooth=smooth, ncores=ncores)
 
   timeru <- parse_timer_seconds(fitu$Timer)
   
@@ -169,6 +169,8 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   out$T <- T
   out$coord_system <- "alr"
   out$iter <- dim(fitc$Samples)[3]
+  out$upsilonT <- fitc$upsilonT
+  out$XiT <- fitc$XiT
   out$alr_base <- D
   out$Y <- Y
   out$upsilon <- upsilon
