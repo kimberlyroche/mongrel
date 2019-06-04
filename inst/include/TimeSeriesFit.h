@@ -161,6 +161,7 @@ class TimeSeriesFit
 
     // assuming time-invariant F, G, W, and gamma
     // need to adapt for time varying parameters (TODO)
+    // smoother sometimes returns all zeros for a sample at time point T (need to debug)
     void apply_simulation_smoother() {
       if(filtered) {
         Thetas_simulation_smoothed = MatrixXd(system_dim*(D-1), T); // single sample over the whole trajectory

@@ -26,7 +26,7 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
                     const Eigen::Map<Eigen::VectorXd> observations, 
                     long seed, 
                     bool ret_mean=false,
-                    bool smooth=false,
+                    bool apply_smoother=false,
                     int ncores=-1){
   #ifdef STRAY_USE_PARALLEL
     Eigen::initParallel();
@@ -88,7 +88,7 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
       Eigen::Ref<VectorXd> SigmaDraw_tmp = SigmaDraw0.col(i);
       Eigen::Map<MatrixXd> SigmaDraw_tosquare(SigmaDraw_tmp.data(), D-1, D-1);
       SigmaDraw_tosquare.noalias() = LSigmaDraw*LSigmaDraw.transpose();
-      if(smooth) {
+      if(apply_smoother) {
         ts.apply_simulation_smoother();
         Eigen::Ref<VectorXd> ThetaSmoothedDraw_tmp = ThetaSmoothedDraw0.col(i); // this is 2 x D-1 x T
         Eigen::Map<MatrixXd> ThetaSDraw_tosquare(ThetaSmoothedDraw_tmp.data(), system_dim*(D-1), T);

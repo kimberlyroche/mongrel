@@ -64,8 +64,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // uncollapseLabraduck
-List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, const Eigen::Map<Eigen::MatrixXd> F, const Eigen::Map<Eigen::MatrixXd> G, const Eigen::Map<Eigen::MatrixXd> W, const double gamma, const int upsilon, const Eigen::Map<Eigen::MatrixXd> Xi, const Eigen::Map<Eigen::MatrixXd> M0, const Eigen::Map<Eigen::MatrixXd> C0, const Eigen::Map<Eigen::VectorXd> observations, long seed, bool ret_mean, bool smooth, int ncores);
-RcppExport SEXP _stray_uncollapseLabraduck(SEXP etaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP gammaSEXP, SEXP upsilonSEXP, SEXP XiSEXP, SEXP M0SEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP seedSEXP, SEXP ret_meanSEXP, SEXP smoothSEXP, SEXP ncoresSEXP) {
+List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, const Eigen::Map<Eigen::MatrixXd> F, const Eigen::Map<Eigen::MatrixXd> G, const Eigen::Map<Eigen::MatrixXd> W, const double gamma, const int upsilon, const Eigen::Map<Eigen::MatrixXd> Xi, const Eigen::Map<Eigen::MatrixXd> M0, const Eigen::Map<Eigen::MatrixXd> C0, const Eigen::Map<Eigen::VectorXd> observations, long seed, bool ret_mean, bool apply_smoother, int ncores);
+RcppExport SEXP _stray_uncollapseLabraduck(SEXP etaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP gammaSEXP, SEXP upsilonSEXP, SEXP XiSEXP, SEXP M0SEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP seedSEXP, SEXP ret_meanSEXP, SEXP apply_smootherSEXP, SEXP ncoresSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -81,9 +81,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::VectorXd> >::type observations(observationsSEXP);
     Rcpp::traits::input_parameter< long >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< bool >::type ret_mean(ret_meanSEXP);
-    Rcpp::traits::input_parameter< bool >::type smooth(smoothSEXP);
+    Rcpp::traits::input_parameter< bool >::type apply_smoother(apply_smootherSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    rcpp_result_gen = Rcpp::wrap(uncollapseLabraduck(eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, ret_mean, smooth, ncores));
+    rcpp_result_gen = Rcpp::wrap(uncollapseLabraduck(eta, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed, ret_mean, apply_smoother, ncores));
     return rcpp_result_gen;
 END_RCPP
 }

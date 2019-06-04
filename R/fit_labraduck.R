@@ -98,7 +98,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   optim_method <- args_null("optim_method", args, "lbfgs")
   useSylv <- args_null("useSylv", args, TRUE)
   ncores <- args_null("ncores", args, -1)
-  smooth <- args_null("smooth", args, TRUE)
+  apply_smoother <- args_null("apply_smoother", args, TRUE)
   
   # ## fit collapsed model ##
   fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, n_samples, 
@@ -133,10 +133,11 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   
   seed <- args_null("seed", args, sample(1:2^15, 1))
   ## uncollapse collapsed model ##
-  if(ret_mean)
-    smooth = false;
+  if(ret_mean) {
+    apply_smoother <- FALSE
+  }
   # ret_mean overrides sample returning for now
-  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, smooth=smooth, ncores=ncores)
+  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
 
   timeru <- parse_timer_seconds(fitu$Timer)
   
