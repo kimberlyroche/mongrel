@@ -101,40 +101,43 @@ plot_distance_distros <- function(fit_models, save_path="") {
          units="in", scale=2, width=4, height=3)
 }
 
-plot_distant_samples <- function(fit_models) {
+plot_distant_samples <- function(fit_models, save_path="") {
   # cherry pick a couple of Sigma samples that are very difference and very similar and visually compare them!
   fit <- fit_models[[length(fit_models)]]
   n_samples <- dim(fit$Sigma)[3]
   i <- 1
   vdiff_idx_corr <- -1
-  corr_dmin <- Inf
   vsim_idx_corr <- -1
-  corr_dmax <- -Inf
   vdiff_idx_cov <- -1
-  cov_dmin <- Inf
   vsim_idx_cov <- -1
-  cov_dmax <- -Inf
+  min_dist_corr <- Inf
+  max_dist_corr <- -Inf
+  min_dist_cov <- Inf
+  max_dist_cov <- -Inf
   for(j in 2:n_samples) {
     A <- cov2cor(fit$Sigma[,,i])
     B <- cov2cor(fit$Sigma[,,j])
     d <- fro_dist(A, B)
-    if(d < corr_dmin) {
-      corr_dmin <- d
+    if(d < min_dist_corr) {
+      min_dist_corr <- d
       vsim_idx_corr <- j
     }
-    if(d > corr_dmax) {
-      corr_dmax <- d
+    if(d > max_dist_corr) {
+      max_dist_corr <- d
       vdiff_idx_corr <- j
     }
     A <- fit$Sigma[,,i]
     B <- fit$Sigma[,,j]
     d <- fro_dist(A, B)
-    if(d < cov_dmin) {
-      cov_dmin <- d
+    if(d < 6) {
+      cat("HERE\n")
+    }
+    if(d < min_dist_cov) {
+      min_dist_cov <- d
       vsim_idx_cov <- j
     }
-    if(d > cov_dmax) {
-      cov_dmax <- d
+    if(d > max_dist_cov) {
+      max_dist_cov <- d
       vdiff_idx_cov <- j
     }
   }
@@ -187,6 +190,23 @@ plot_distant_samples <- function(fit_models) {
   p <- ggplot(data=df, aes(x=value)) + geom_density(aes(fill=matrix), alpha = 0.4) +
     theme_minimal()
   ggsave(filename=paste0(save_path,"/element_distributions_covariance.png"),
+         units="in", scale=2, width=4, height=3)
+}
+
+plot_element_distros <- function(fit_models, W_scales, percent_sample=0.1, save_path="") {
+  df <- data.frame(value=c(), W_scale=c())
+  n_samples <- dim(fit$Sigma)[3]
+  sample_idx <- sample(n_samples)[1:round(n_samples*percent_sample)]
+  for(i in 1:length(fit_models)) {
+    fit <- fit_models[[i]]
+    # there are a shitton of these, just sample
+    elements <- c(fit$Sigma[,,sample_idx])
+    df <- rbind(df, data.frame(value=elements, W_scale=W_scales[i]))
+  }
+  df$W_scale <- as.factor(df$W_scale)
+  p <- ggplot(data=df, aes(x=value)) + geom_density(aes(fill=W_scale), alpha = 0.4) +
+    theme_minimal()
+  ggsave(filename=paste0(save_path,"/element_distributions_W_sweep.png"),
          units="in", scale=2, width=4, height=3)
 }
 
@@ -263,7 +283,7 @@ record_time <- function(fit, baboon, save_path="", append_str="") {
   sink()
 }
 
-fit_model <- function(indiv_data, W, F, n_samples=2000, ret_mean=FALSE, apply_smoother=FALSE, subset_time=TRUE) {
+fit_model <- function(indiv_data, W, W_scale, F, n_samples=2000, ret_mean=FALSE, apply_smoother=FALSE, subset_time=TRUE) {
   Y_full <- indiv_data$ys
   alr_Y_full <- driver::alr(Y_full + 0.5)
   alr_means <- colMeans(alr_Y_full)
@@ -292,7 +312,7 @@ fit_model <- function(indiv_data, W, F, n_samples=2000, ret_mean=FALSE, apply_sm
   omega <- 2*pi/365
   G <- matrix(c(cos(omega), -sin(omega), 0, sin(omega), cos(omega), 0, 0, 0, 1), 3, 3)
   C0 <- W*10
-  gamma <- 1
+  gamma <- 1/W_scale
 
   D <- nrow(Y)
   # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
@@ -301,7 +321,7 @@ fit_model <- function(indiv_data, W, F, n_samples=2000, ret_mean=FALSE, apply_sm
   upsilon <- D+10
   Xi <- diag(D-1)
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
-                   gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations,
+                   gamma=gamma, F=F, G=G, W=W, W_scale=W_scale, M0=M0, C0=C0, observations=observations,
                    max_iter=100000, decomp_method="eigen", n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother)
   return(list(fit=fit, Y=Y, observations=observations))
 }
@@ -315,10 +335,10 @@ F <- matrix(c(1, 0, 1), 3, 1)
 W_scales <- c(0.005, 0.01, 0.02, 0.03, 0.05, 0.1)
 fit_models <- list()
 
-ret_mean <- TRUE # sample from Sigma | eta
-n_samples <- 0
+ret_mean <- FALSE # sample from Sigma | eta
+n_samples <- 2000
 
-verbose <- TRUE
+verbose <- FALSE
 subset_time <- TRUE
 apply_smoother <- TRUE
 
@@ -329,11 +349,10 @@ for(baboon in best_sampled) {
     cat("Fitting",baboon,"over all taxa...\n")
     load(paste0("C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data/",baboon,"_data.RData"))
   
-    diag(W) <- c(rep(W_scales[w], 3))
-    W[3,3] <- W[3,3]/100 # make this tiny; TODO -- debug why 0 causes problems with simulation smoother
+    diag(W) <- c(1, 1, 1/100)
     append_str <- paste0("_W",w)
-      
-    fit_all <- fit_model(indiv_data, W, F, n_samples=0, ret_mean=ret_mean, apply_smoother=apply_smoother, subset_time=TRUE)
+
+    fit_all <- fit_model(indiv_data, W, W_scales[w], F, n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother, subset_time=TRUE)
     fit_models[[length(fit_models)+1]] <- fit_all$fit
     fit <- fit_all$fit
     Y <- fit_all$Y
@@ -355,7 +374,8 @@ for(baboon in best_sampled) {
 
 if(verbose & n_samples > 0) {
   plot_distance_distros(fit_models, save_path)
-  plot_distant_samples(fit_models)
+  plot_distant_samples(fit_models, save_path)
+  plot_element_distros(fit_models, W_scales=W_scales, percent_sample=0.1, save_path=save_path)
 }
 
 

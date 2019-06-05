@@ -19,6 +19,6 @@ Eigen::MatrixXd power_G(Eigen::MatrixXd G, int it_begin, int it_end);
 //' Calculate (marginal) matrix normal mean for DLM
 Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, Eigen::VectorXd observations);
 //' Calculate (marginal) matrix normal covariance for DLM
-Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert);
+Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, double W_scale, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert);
 
 #endif

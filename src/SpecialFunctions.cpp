@@ -87,7 +87,7 @@ Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, 
 
 // build A matrix (covariance over samples) assuming time-invariant parameters F, G, W, gamma
 // [[Rcpp::export]]
-Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert) {
+Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, double W_scale, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert) {
   // check T >= 1
   int N = observations.size();
   int T = observations.maxCoeff();
@@ -129,7 +129,7 @@ Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen:
     }
   }
   if(invert) {
-    return(res.inverse());
+    return((W_scale*res).inverse());
   }
-  return res;
+  return (W_scale*res);
 }

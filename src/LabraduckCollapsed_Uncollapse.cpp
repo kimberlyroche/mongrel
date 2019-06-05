@@ -18,6 +18,7 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
                     const Eigen::Map<Eigen::MatrixXd> F, 
                     const Eigen::Map<Eigen::MatrixXd> G, 
                     const Eigen::Map<Eigen::MatrixXd> W, 
+                    const double W_scale,
                     const double gamma,
                     const int upsilon,
                     const Eigen::Map<Eigen::MatrixXd> Xi, 
@@ -69,7 +70,7 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
   for (int i=0; i<iter; i++){
   //   //R_CheckUserInterrupt();
     const Map<const MatrixXd> Eta(&eta(i*N*(D-1)),D-1, N); // current sample
-    TimeSeriesFit ts(F, G, W, gamma, upsilon, Xi, M0, C0, observations);
+    TimeSeriesFit ts(F, G, W, W_scale, gamma, upsilon, Xi, M0, C0, observations);
     ts.apply_Kalman_filter(Eta.transpose());
     if(ret_mean) {
       // return (1) mean of Sigma (2) sample of each t from marginal (3) sample from 1:T

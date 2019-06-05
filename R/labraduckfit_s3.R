@@ -3,13 +3,13 @@ labraduckfit <- function(D, N, T, coord_system, iter=NULL,
                        alr_base=NULL, ilr_base=NULL,
                        Eta=NULL, Sigma=NULL, Sigma_default=NULL, 
                        Y=NULL, upsilon=NULL, Xi=NULL, Xi_default=NULL,
-                       gamma=NULL, F=NULL, G=NULL, W=NULL, M0=NULL, C0=NULL,
+                       gamma=NULL, F=NULL, G=NULL, W=NULL, W_scale=NULL, M0=NULL, C0=NULL,
                        observations=NULL,
                        init=NULL){
   m <- new_labraduckfit(D, N, T, coord_system, iter, alr_base, ilr_base,
                       Eta, Sigma, Sigma_default, 
                       Y, upsilon, Xi, Xi_default,
-                      gamma, F, G, W, M0, C0,
+                      gamma, F, G, W, W_scale, M0, C0,
                       observations,
                       init)
   verify(m)
@@ -22,7 +22,7 @@ new_labraduckfit <- function(D, N, T, coord_system, iter=NULL,
                        alr_base=NULL, ilr_base=NULL,
                        Eta=NULL, Sigma=NULL, Sigma_default=NULL, 
                        Y=NULL, upsilon=NULL, Xi=NULL, Xi_default=NULL,
-                       gamma=NULL, F=NULL, G=NULL, W=NULL, M0=NULL, C0=NULL,
+                       gamma=NULL, F=NULL, G=NULL, W=NULL, W_scale=NULL, M0=NULL, C0=NULL,
                        observations=NULL,
                        init=NULL){
   m <- new_pibblefit(D, N, Q=0, coord_system, iter, alr_base, ilr_base,
@@ -34,6 +34,7 @@ new_labraduckfit <- function(D, N, T, coord_system, iter=NULL,
   m$F <- F
   m$G <- G
   m$W <- W
+  m$W_scale <- W_scale
   m$M0 <- M0
   m$C0 <- C0
   m$observations <- observations

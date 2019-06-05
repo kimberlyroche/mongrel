@@ -18,6 +18,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
                const Eigen::MatrixXd F,
                const Eigen::MatrixXd G,
                const Eigen::MatrixXd W,
+               const double W_scale,
                const Eigen::MatrixXd M0,
                const Eigen::MatrixXd C0,
                const Eigen::VectorXd observations, 
@@ -52,7 +53,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   // calculate B, AInv
   MatrixXd B = dlm_B(F, G, M0, observations);
   MatrixXd KInv = Xi.inverse();
-  MatrixXd AInv = dlm_A(gamma, F, G, W, C0, observations, true);
+  MatrixXd AInv = dlm_A(gamma, F, G, W, W_scale, C0, observations, true);
 
   LabraduckCollapsed cm(Y, upsilon, B, KInv, AInv, useSylv);
   Map<VectorXd> eta(init.data(), init.size()); // will rewrite by optim

@@ -35,7 +35,7 @@ NULL
 
 #' @rdname labraduck_fit
 #' @export
-labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, observations,
+labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale, M0, C0, observations,
                     init=NULL, pars=c("Eta", "Sigma", "Thetas_filtered", "Thetas_smoothed"),
                     ...){
   args <- list(...)
@@ -72,7 +72,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
     # create pibblefit object and pass to sample_prior then return
     # untested (TODO)
     out <- labraduckfit(N=N, D=D, T=T, coord_system="alr", alr_base=D, upsilon=upsilon, Xi=Xi,
-      gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations)
+      gamma=gamma, F=F, G=G, W=W, W_scale=W_scale, M0=M0, C0=C0, observations=observations)
     out <- sample_prior(out, n_samples=n_samples, pars=pars, use_names=use_names)
     return(out)
   } else {
@@ -101,7 +101,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   apply_smoother <- args_null("apply_smoother", args, TRUE)
   
   # ## fit collapsed model ##
-  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, n_samples, 
+  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, W_scale, M0, C0, observations, init, n_samples, 
                                 calcGradHess, b1, b2, step_size, epsilon, eps_f, 
                                 eps_g, max_iter, verbose, verbose_rate, 
                                 decomp_method, optim_method, eigvalthresh, 
@@ -137,7 +137,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
     apply_smoother <- FALSE
   }
   # ret_mean overrides sample returning for now
-  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
+  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, W_scale, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
 
   timeru <- parse_timer_seconds(fitu$Timer)
   
@@ -182,6 +182,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, M0, C0, obs
   out$F <- F
   out$G <- G
   out$W <- W
+  out$W <- W_scale
   out$M0 <- M0
   out$C0 <- C0
   out$observations <- observations
