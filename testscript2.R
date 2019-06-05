@@ -344,6 +344,9 @@ apply_smoother <- TRUE
 
 save_path <- "C:/Users/kim/Desktop/rules_of_life_stray_run1"
 
+baboon <- "DUI"
+w <- 1
+
 for(baboon in best_sampled) {
   for(w in 1:length(W_scales)) {
     cat("Fitting",baboon,"over all taxa...\n")
@@ -352,8 +355,8 @@ for(baboon in best_sampled) {
     diag(W) <- c(1, 1, 1/100)
     append_str <- paste0("_W",w)
 
-    fit_all <- fit_model(indiv_data, W, W_scales[w], F, n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother, subset_time=TRUE)
-    fit_models[[length(fit_models)+1]] <- fit_all$fit
+    fit_all <- fit_model(indiv_data, W, log(W_scales[w]), F, n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother, subset_time=TRUE)
+    log(fit_models[[length(fit_models)+1]] <- fit_all$fit
     fit <- fit_all$fit
     Y <- fit_all$Y
     observations <- fit_all$observations

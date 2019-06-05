@@ -25,8 +25,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // optimLabraduckCollapsed
-List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, const double upsilon, const Eigen::MatrixXd Xi, const double gamma, const Eigen::MatrixXd F, const Eigen::MatrixXd G, const Eigen::MatrixXd W, const double W_scale, const Eigen::MatrixXd M0, const Eigen::MatrixXd C0, const Eigen::VectorXd observations, Eigen::MatrixXd init, int n_samples, bool calcGradHess, double b1, double b2, double step_size, double epsilon, double eps_f, double eps_g, int max_iter, bool verbose, int verbose_rate, String decomp_method, String optim_method, double eigvalthresh, double jitter, double multDirichletBoot, bool useSylv, int ncores);
-RcppExport SEXP _stray_optimLabraduckCollapsed(SEXP YSEXP, SEXP upsilonSEXP, SEXP XiSEXP, SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP W_scaleSEXP, SEXP M0SEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP initSEXP, SEXP n_samplesSEXP, SEXP calcGradHessSEXP, SEXP b1SEXP, SEXP b2SEXP, SEXP step_sizeSEXP, SEXP epsilonSEXP, SEXP eps_fSEXP, SEXP eps_gSEXP, SEXP max_iterSEXP, SEXP verboseSEXP, SEXP verbose_rateSEXP, SEXP decomp_methodSEXP, SEXP optim_methodSEXP, SEXP eigvalthreshSEXP, SEXP jitterSEXP, SEXP multDirichletBootSEXP, SEXP useSylvSEXP, SEXP ncoresSEXP) {
+List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, const double upsilon, const Eigen::MatrixXd Xi, const double gamma, const Eigen::MatrixXd F, const Eigen::MatrixXd G, const Eigen::MatrixXd W, const Eigen::MatrixXd M0, const Eigen::MatrixXd C0, const Eigen::VectorXd observations, Eigen::MatrixXd init, Eigen::VectorXd W_scale_init, int n_samples, bool calcGradHess, double b1, double b2, double step_size, double epsilon, double eps_f, double eps_g, int max_iter, bool verbose, int verbose_rate, String decomp_method, String optim_method, double eigvalthresh, double jitter, double multDirichletBoot, bool useSylv, int ncores);
+RcppExport SEXP _stray_optimLabraduckCollapsed(SEXP YSEXP, SEXP upsilonSEXP, SEXP XiSEXP, SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP M0SEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP initSEXP, SEXP W_scale_initSEXP, SEXP n_samplesSEXP, SEXP calcGradHessSEXP, SEXP b1SEXP, SEXP b2SEXP, SEXP step_sizeSEXP, SEXP epsilonSEXP, SEXP eps_fSEXP, SEXP eps_gSEXP, SEXP max_iterSEXP, SEXP verboseSEXP, SEXP verbose_rateSEXP, SEXP decomp_methodSEXP, SEXP optim_methodSEXP, SEXP eigvalthreshSEXP, SEXP jitterSEXP, SEXP multDirichletBootSEXP, SEXP useSylvSEXP, SEXP ncoresSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -37,11 +37,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type F(FSEXP);
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type G(GSEXP);
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type W(WSEXP);
-    Rcpp::traits::input_parameter< const double >::type W_scale(W_scaleSEXP);
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type M0(M0SEXP);
     Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type C0(C0SEXP);
     Rcpp::traits::input_parameter< const Eigen::VectorXd >::type observations(observationsSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type init(initSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type W_scale_init(W_scale_initSEXP);
     Rcpp::traits::input_parameter< int >::type n_samples(n_samplesSEXP);
     Rcpp::traits::input_parameter< bool >::type calcGradHess(calcGradHessSEXP);
     Rcpp::traits::input_parameter< double >::type b1(b1SEXP);
@@ -60,7 +60,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type multDirichletBoot(multDirichletBootSEXP);
     Rcpp::traits::input_parameter< bool >::type useSylv(useSylvSEXP);
     Rcpp::traits::input_parameter< int >::type ncores(ncoresSEXP);
-    rcpp_result_gen = Rcpp::wrap(optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, W_scale, M0, C0, observations, init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores));
+    rcpp_result_gen = Rcpp::wrap(optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, W_scale_init, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -370,9 +370,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// dlm_A
-Eigen::MatrixXd dlm_A(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, double W_scale, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert);
-RcppExport SEXP _stray_dlm_A(SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP W_scaleSEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP invertSEXP) {
+// dlm_U
+Eigen::MatrixXd dlm_U(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert);
+RcppExport SEXP _stray_dlm_U(SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP invertSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -380,11 +380,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type F(FSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type G(GSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type W(WSEXP);
-    Rcpp::traits::input_parameter< double >::type W_scale(W_scaleSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type C0(C0SEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type observations(observationsSEXP);
     Rcpp::traits::input_parameter< bool >::type invert(invertSEXP);
-    rcpp_result_gen = Rcpp::wrap(dlm_A(gamma, F, G, W, W_scale, C0, observations, invert));
+    rcpp_result_gen = Rcpp::wrap(dlm_U(gamma, F, G, W, C0, observations, invert));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -511,7 +510,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stray_lmvgamma_deriv", (DL_FUNC) &_stray_lmvgamma_deriv, 2},
     {"_stray_power_G", (DL_FUNC) &_stray_power_G, 3},
     {"_stray_dlm_B", (DL_FUNC) &_stray_dlm_B, 4},
-    {"_stray_dlm_A", (DL_FUNC) &_stray_dlm_A, 8},
+    {"_stray_dlm_U", (DL_FUNC) &_stray_dlm_U, 7},
     {"_stray_eigen_lap_test", (DL_FUNC) &_stray_eigen_lap_test, 4},
     {"_stray_cholesky_lap_test", (DL_FUNC) &_stray_cholesky_lap_test, 4},
     {"_stray_LaplaceApproximation_test", (DL_FUNC) &_stray_LaplaceApproximation_test, 5},

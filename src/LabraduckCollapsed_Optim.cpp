@@ -18,11 +18,11 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
                const Eigen::MatrixXd F,
                const Eigen::MatrixXd G,
                const Eigen::MatrixXd W,
-               const double W_scale,
                const Eigen::MatrixXd M0,
                const Eigen::MatrixXd C0,
                const Eigen::VectorXd observations, 
                Eigen::MatrixXd init, 
+               Eigen::VectorXd W_scale_init,
                int n_samples=2000, 
                bool calcGradHess = true,
                double b1 = 0.9,         
@@ -50,45 +50,60 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   int N = Y.cols();
   int D = Y.rows();
 
+  Rcout << "W_scale_init:" << W_scale_init << std::endl;
+
   // calculate B, AInv
   MatrixXd B = dlm_B(F, G, M0, observations);
   MatrixXd KInv = Xi.inverse();
-  MatrixXd AInv = dlm_A(gamma, F, G, W, W_scale, C0, observations, true);
+  MatrixXd U = dlm_U(gamma, F, G, W, C0, observations, false);
+  MatrixXd UInv = U.inverse();
 
-  LabraduckCollapsed cm(Y, upsilon, B, KInv, AInv, useSylv);
+  LabraduckCollapsed cm(Y, upsilon, B, KInv, U, UInv, useSylv);
+
   Map<VectorXd> eta(init.data(), init.size()); // will rewrite by optim
+  VectorXd pars(init.size() + W_scale_init.size());
+  pars.head(init.size()) = eta;
+  pars.tail(W_scale_init.size()) = W_scale_init;
+
+  Rcout << "pars.tail(): " << pars.tail(1) << std::endl;
+  Rcout << "pars.size(): " << pars.size() << std::endl;
+  Rcout << "init.size(): " << init.size() << std::endl;
+
   double nllopt; // NEGATIVE LogLik at optim
-  List out(9);
+  List out(10);
   out.names() = CharacterVector::create("LogLik", "Gradient", "Hessian",
-            "Pars", "Samples", "Timer", "logInvNegHessDet", "B", "AInv");
+            "Pars", "Samples", "W_scale", "Timer", "logInvNegHessDet", "B", "UInv");
   
   // Pick optimizer (ADAM - without perturbation appears to be best)
   //   ADAM with perturbations not fully implemented
   timer.step("Optimization_start");
   int status;
   if (optim_method=="lbfgs"){
-    status = Numer::optim_lbfgs(cm, eta, nllopt, max_iter, eps_f, eps_g);
+    status = Numer::optim_lbfgs(cm, pars, nllopt, max_iter, eps_f, eps_g);
   } else if (optim_method=="adam"){
-    status = adam::optim_adam(cm, eta, nllopt, b1, b2, step_size, epsilon, 
+    status = adam::optim_adam(cm, pars, nllopt, b1, b2, step_size, epsilon, 
                                   eps_f, eps_g, max_iter, verbose, verbose_rate);  
   } else {
     Rcpp::stop("unrecognized optimization method");
   }
-   
-  timer.step("Optimization_stop");
 
+  timer.step("Optimization_stop");
   if (status<0)
     Rcpp::warning("Max Iterations Hit, May not be at optima");
+  eta = pars.head(init.size());
   Map<MatrixXd> etamat(eta.data(), D-1, N);
+  Map<VectorXd> W_scale(pars.tail(W_scale_init.size()).data(), W_scale_init.size());
   out[0] = -nllopt; // Return (positive) LogLik
   out[3] = etamat;
+  out[5] = W_scale.array().exp().matrix();
+
   
   if (n_samples > 0 || calcGradHess){
     if (verbose) Rcout << "Allocating for Gradient" << std::endl;
     VectorXd grad(N*(D-1));
     MatrixXd hess; // don't preallocate this thing could be unneeded
     if (verbose) Rcout << "Calculating Gradient" << std::endl;
-    grad = cm.calcGrad(); // should have eta at optima already
+    grad = cm.calcGrad(W_scale); // should have eta at optima already
     
     // "Multinomial-Dirichlet" option
     if (multDirichletBoot>=0.0){
@@ -104,7 +119,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
       samples.attr("dim") = d; // convert to 3d array for return to R
       out[4] = samples;
       NumericVector t(timer);
-      out[5] = t;
+      out[6] = t;
       timer.step("Overall_stop");
       return out;
     }
@@ -136,7 +151,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
         Rcpp::warning("Decomposition of Hessian Failed, returning MAP Estimate only");
         return out;
       }
-      out[6] = logInvNegHessDet;
+      out[7] = logInvNegHessDet;
       
       IntegerVector d = IntegerVector::create(D-1, N, n_samples);
       NumericVector samples = wrap(samp);
@@ -146,8 +161,8 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   } // endif n_samples || calcGradHess
   timer.step("Overall_stop");
   NumericVector t(timer);
-  out[5] = t;
-  out[7] = B;
-  out[8] = AInv;
+  out[6] = t;
+  out[8] = B;
+  out[9] = UInv;
   return out;
 }

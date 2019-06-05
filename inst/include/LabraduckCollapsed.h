@@ -17,10 +17,14 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     const double upsilon;
     const MatrixXd B;
     const MatrixXd KInv;
-    const MatrixXd AInv;
+    const MatrixXd U;
+    const MatrixXd UInv; // AInv = (1/W_scale)*UInv
+    MatrixXd AInv; // no longer constant
+    MatrixXd A; // no longer constant
     // computed quantities 
     int D;
     int N;
+    int P;
     double delta;
     Eigen::ArrayXd m;
     Eigen::RowVectorXd n;
@@ -44,12 +48,14 @@ class LabraduckCollapsed : public Numer::MFuncGrad
                         const double upsilon_,
                         const MatrixXd B_,
                         const MatrixXd KInv_,
-                        const MatrixXd AInv_, 
+                        const MatrixXd U_,
+                        const MatrixXd UInv_,
                         bool sylv=false) :
-    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), AInv(AInv_)
+    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), U(U_), UInv(UInv_)
     {
       D = Y.rows();           // number of multinomial categories
       N = Y.cols();           // number of samples
+      P = 1;                  // single scalar for W
       n = Y.colwise().sum();  // total number of counts per sample
       delta = 0.5*(upsilon + N + D - 2.0);
       this->sylv = sylv;
@@ -57,9 +63,13 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     ~LabraduckCollapsed(){}        
     
     // Update with Eta when it comes in as a vector
-    void updateWithEtaLL(const Ref<const VectorXd>& etavec){
+    void updateWithEtaLL(const Ref<const VectorXd>& etavec, const Ref<const VectorXd>& W_scale){
       const Map<const MatrixXd> eta(etavec.data(), D-1, N);
       E = eta - B;
+
+      A = exp(W_scale(0))*U;
+      AInv = (1/exp(W_scale(0)))*UInv;
+
       if (sylv & (N < (D-1))){
         S.noalias() = AInv*E.transpose()*KInv*E;
         S.diagonal() += VectorXd::Ones(N);
@@ -111,7 +121,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     }
     
     // Must have called updateWithEtaLL and then updateWithEtaGH first 
-    VectorXd calcGrad(){
+    VectorXd calcGrad(const Ref<const VectorXd>& W_scale){
       // For Multinomial
       MatrixXd g = (Y.topRows(D-1) - (rhomat.array().rowwise()*n.array())).matrix();
       //Rcout << "dim Y:" << Y.size() << std::endl;
@@ -123,21 +133,21 @@ class LabraduckCollapsed : public Numer::MFuncGrad
       } else {
         g.noalias() += -delta*(R + R.transpose())*C.transpose();        
       }
-      Map<VectorXd> grad(g.data(), g.size()); 
+      Map<VectorXd> grad_eta(g.data(), g.size());
+      // abandon the pretext of W_scale as a vector
+      double alpha = exp(W_scale(0));
+      MatrixXd temp = R*E*UInv*(E.transpose());
+      VectorXd g2(1);
+      g2(0) = -((D-1)*N)/(2*alpha) + delta*(temp.diagonal().sum())*std::pow(alpha, -2);
+      VectorXd grad(grad_eta.size() + 1);
+      grad << grad_eta, g2;
       return grad; // not transposing (leaving as vector)
     }
     
     
     // Must have called updateWithEtaLL and then updateWithEtaGH first 
     MatrixXd calcHess(){
-      bool tmp_sylv = sylv;
-      if (sylv & (N < (D-1))){
-        MatrixXd eta = E + B;
-        Map<VectorXd> etavec(eta.data(), N*(D-1));
-        this->sylv=false;
-        updateWithEtaLL(etavec);
-        updateWithEtaGH();
-      }
+      // TODO: add back in Sylvester's theorem bit
       // for MatrixVariate T
       MatrixXd H(N*(D-1), N*(D-1));
       MatrixXd RCT(D-1, N);
@@ -177,16 +187,16 @@ class LabraduckCollapsed : public Numer::MFuncGrad
         H.block(j*(D-1), j*(D-1), D-1, D-1).noalias()  += n_parallel(j)*W;
       }
       }
-      // Turn back on sylv option if it was wanted:
-      this->sylv = tmp_sylv;
       return H;
     }
     
     // function for use by ADAMOptimizer wrapper (and for RcppNumeric L-BFGS)
-    virtual double f_grad(Numer::Constvec& eta, Numer::Refvec grad){
-      updateWithEtaLL(eta);    // precompute things needed for LogLik
+    virtual double f_grad(Numer::Constvec& pars, Numer::Refvec grad){
+      const Map<const VectorXd> eta(pars.head(N*(D-1)).data(), N*D-1);
+      const Map<const VectorXd> W_scale(pars.tail(P).data(), P); // may want to scale blocks of W separately in future
+      updateWithEtaLL(eta, W_scale);    // precompute things needed for LogLik
       updateWithEtaGH();       // precompute things needed for gradient and hessian
-      grad = -calcGrad();      // negative because wraper minimizes
+      grad = -calcGrad(W_scale);      // negative because wraper minimizes
       return -calcLogLik(eta); // negative because wraper minimizes
     }
 };
