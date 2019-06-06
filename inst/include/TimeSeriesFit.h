@@ -113,7 +113,7 @@ class TimeSeriesFit
         } else {
           // one-step ahead observation forecast
           ft_t = Ft*A_t;
-          q_t = gamma*W_scale + (Ft*R_t*F)(0,0);
+          q_t = gamma + (Ft*R_t*F)(0,0);
           // system posterior at t
           et_t = eta.row(curr_obs_idx) - ft_t;
           S_t = R_t*F/q_t;

@@ -50,29 +50,25 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   int N = Y.cols();
   int D = Y.rows();
 
-  Rcout << "W_scale_init:" << W_scale_init << std::endl;
-
   // calculate B, AInv
   MatrixXd B = dlm_B(F, G, M0, observations);
   MatrixXd KInv = Xi.inverse();
-  MatrixXd U = dlm_U(gamma, F, G, W, C0, observations, false);
-  MatrixXd UInv = U.inverse();
+  MatrixXd U = dlm_U(F, G, W, C0, observations); // this is explicitly missing (1) scale W_scale (2) gamma on the diagonal
 
-  LabraduckCollapsed cm(Y, upsilon, B, KInv, U, UInv, useSylv);
+  Rcout << "Initializing log(W_scale)=" << W_scale_init(0) << std::endl;
+  Rcout << "                  W_scale=" << exp(W_scale_init(0)) << std::endl;
+
+  LabraduckCollapsed cm(Y, upsilon, B, KInv, U, gamma, useSylv);
 
   Map<VectorXd> eta(init.data(), init.size()); // will rewrite by optim
   VectorXd pars(init.size() + W_scale_init.size());
   pars.head(init.size()) = eta;
   pars.tail(W_scale_init.size()) = W_scale_init;
 
-  Rcout << "pars.tail(): " << pars.tail(1) << std::endl;
-  Rcout << "pars.size(): " << pars.size() << std::endl;
-  Rcout << "init.size(): " << init.size() << std::endl;
-
   double nllopt; // NEGATIVE LogLik at optim
-  List out(10);
+  List out(9);
   out.names() = CharacterVector::create("LogLik", "Gradient", "Hessian",
-            "Pars", "Samples", "W_scale", "Timer", "logInvNegHessDet", "B", "UInv");
+            "Pars", "Samples", "W_scale", "Timer", "logInvNegHessDet", "B");
   
   // Pick optimizer (ADAM - without perturbation appears to be best)
   //   ADAM with perturbations not fully implemented
@@ -93,6 +89,10 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   eta = pars.head(init.size());
   Map<MatrixXd> etamat(eta.data(), D-1, N);
   Map<VectorXd> W_scale(pars.tail(W_scale_init.size()).data(), W_scale_init.size());
+
+  Rcout << "Optimized log(W_scale)=" << W_scale(0) << std::endl;
+  Rcout << "               W_scale=" << exp(W_scale(0)) << std::endl;
+
   out[0] = -nllopt; // Return (positive) LogLik
   out[3] = etamat;
   out[5] = W_scale.array().exp().matrix();
@@ -163,6 +163,5 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   NumericVector t(timer);
   out[6] = t;
   out[8] = B;
-  out[9] = UInv;
   return out;
 }

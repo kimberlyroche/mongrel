@@ -18,9 +18,9 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     const MatrixXd B;
     const MatrixXd KInv;
     const MatrixXd U;
-    const MatrixXd UInv; // AInv = (1/W_scale)*UInv
-    MatrixXd AInv; // no longer constant
-    MatrixXd A; // no longer constant
+    const double gamma;
+    MatrixXd A;
+    MatrixXd AInv; // AInv = (gamma*I + W_scale*U)^{-1}
     // computed quantities 
     int D;
     int N;
@@ -31,6 +31,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     MatrixXd S;  // I_D-1 + KEAE'
     //Eigen::HouseholderQR<MatrixXd> Sdec;
     Eigen::PartialPivLU<MatrixXd> Sdec;
+    Eigen::PartialPivLU<MatrixXd> Adec;
     MatrixXd E;  // eta-B
     ArrayXXd O;  // exp{eta}
     // only needed for gradient and hessian
@@ -49,9 +50,9 @@ class LabraduckCollapsed : public Numer::MFuncGrad
                         const MatrixXd B_,
                         const MatrixXd KInv_,
                         const MatrixXd U_,
-                        const MatrixXd UInv_,
+                        const double gamma_,
                         bool sylv=false) :
-    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), U(U_), UInv(UInv_)
+    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), U(U_), gamma(gamma_)
     {
       D = Y.rows();           // number of multinomial categories
       N = Y.cols();           // number of samples
@@ -67,9 +68,10 @@ class LabraduckCollapsed : public Numer::MFuncGrad
       const Map<const MatrixXd> eta(etavec.data(), D-1, N);
       E = eta - B;
 
-      A = exp(W_scale(0))*U;
-      AInv = (1/exp(W_scale(0)))*UInv;
-
+      double e_alpha = exp(W_scale(0));
+      A = gamma*MatrixXd::Identity(N,N) + e_alpha*U;
+      Adec.compute(A);
+      AInv = Adec.inverse();
       if (sylv & (N < (D-1))){
         S.noalias() = AInv*E.transpose()*KInv*E;
         S.diagonal() += VectorXd::Ones(N);
@@ -117,6 +119,17 @@ class LabraduckCollapsed : public Numer::MFuncGrad
       }
       ld += log(c);
       ll -= delta*ld;
+      // repeat for term -P/2 log |A|
+      ld = 0.0;
+      c = Adec.permutationP().determinant();
+      diagLU = Adec.matrixLU().diagonal();
+      for (unsigned i = 0; i < diagLU.rows(); ++i) {
+        const double& lii = diagLU(i);
+        if (lii < 0.0) c *= -1;
+        ld += log(std::abs(lii));
+      }
+      ld += log(c);
+      ll -= 0.5*(D-1)*ld; // repeated can speed up in future
       return ll;
     }
     
@@ -134,11 +147,12 @@ class LabraduckCollapsed : public Numer::MFuncGrad
         g.noalias() += -delta*(R + R.transpose())*C.transpose();        
       }
       Map<VectorXd> grad_eta(g.data(), g.size());
-      // abandon the pretext of W_scale as a vector
-      double alpha = exp(W_scale(0));
-      MatrixXd temp = R*E*UInv*(E.transpose());
+      // gradient for W_scale
+      MatrixXd M = AInv*(E.transpose())*R*E*AInv;
       VectorXd g2(1);
-      g2(0) = -((D-1)*N)/(2*alpha) + delta*(temp.diagonal().sum())*std::pow(alpha, -2);
+      g2(0) = delta*(M.array()*U.array()).sum();
+      g2(0) -= 0.5*(D-1)*(AInv.array()*U.array()).sum();
+      g2(0) = exp(W_scale(0))*g2(0);
       VectorXd grad(grad_eta.size() + 1);
       grad << grad_eta, g2;
       return grad; // not transposing (leaving as vector)

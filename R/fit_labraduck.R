@@ -13,7 +13,7 @@
 #' @param F Observation-level transformation matrix (see model)
 #' @param G System-level transformation matrix (see model)
 #' @param W System-level noise covariance (of dim Q) over rows of eta transpose (see model)
-#' @param W_scale System-level scale for W, gamma, and C0 (this parameterization gives computational convenience in optimization)
+#' @param W_scale_init System-level scale initialization for W, gamma, and C0 (this parameterization gives computational convenience in optimization)
 #' @param M0 Prior mean over system matrix
 #' @param C0 Prior covariance over system-level noise
 #' @param observations Vector timepoints indicating offset from first observation (labeled 1)
@@ -36,7 +36,7 @@ NULL
 
 #' @rdname labraduck_fit
 #' @export
-labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale, M0, C0, observations,
+labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale_init, M0, C0, observations,
                     init=NULL, pars=c("Eta", "Sigma", "Thetas_filtered", "Thetas_smoothed"),
                     ...){
   args <- list(...)
@@ -73,7 +73,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale, M0
     # create pibblefit object and pass to sample_prior then return
     # untested (TODO)
     out <- labraduckfit(N=N, D=D, T=T, coord_system="alr", alr_base=D, upsilon=upsilon, Xi=Xi,
-      gamma=gamma, F=F, G=G, W=W, W_scale=W_scale, M0=M0, C0=C0, observations=observations)
+      gamma=gamma, F=F, G=G, W=W, W_scale_init=W_scale_init, M0=M0, C0=C0, observations=observations)
     out <- sample_prior(out, n_samples=n_samples, pars=pars, use_names=use_names)
     return(out)
   } else {
@@ -102,101 +102,102 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale, M0
   apply_smoother <- args_null("apply_smoother", args, TRUE)
   
   # ## fit collapsed model ##
-  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, W_scale, n_samples, 
+  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, W_scale_init, n_samples, 
                                 calcGradHess, b1, b2, step_size, epsilon, eps_f, 
                                 eps_g, max_iter, verbose, verbose_rate, 
                                 decomp_method, optim_method, eigvalthresh, 
                                 jitter, multDirichletBoot, 
                                 useSylv, ncores)
   timerc <- parse_timer_seconds(fitc$Timer)
-  return(fitc)
 
-  # out <- list()
+  W_scale <- fitc$W_scale
 
-  # # if n_samples=0 or if hessian fails, then use MAP eta estimate for 
-  # # uncollapsing and unless otherwise specified against, use only the 
-  # # posterior mean for Lambda and Sigma 
-  # if (is.null(fitc$Samples)) {
-  #   fitc$Samples <- add_array_dim(fitc$Pars, 3)
-  #   ret_mean <- args_null("ret_mean", args, TRUE)
-  #   if (ret_mean && n_samples>0){
-  #     warning("Laplace Approximation Failed, using MAP estimate of eta", 
-  #             " to obtain Posterior mean of Lambda and Sigma", 
-  #             " (i.e., not sampling from posterior distribution of Lambda or Sigma)")
-  #   }
-  #   if (!ret_mean && n_samples > 0){
-  #     warning("Laplace Approximation Failed, using MAP estimate of eta", 
-  #             "but ret_mean was manually specified as FALSE so sampling", 
-  #             "from posterior of Lambda and Sigma rather than using posterior mean")
-  #   }
-  # } else {
-  #   ret_mean <- args_null("ret_mean", args, FALSE)
-  # }
-  
-  # seed <- args_null("seed", args, sample(1:2^15, 1))
-  # ## uncollapse collapsed model ##
-  # if(ret_mean) {
-  #   apply_smoother <- FALSE
-  # }
-  # # ret_mean overrides sample returning for now
-  # fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, W_scale, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
+  out <- list()
 
-  # timeru <- parse_timer_seconds(fitu$Timer)
+  # if n_samples=0 or if hessian fails, then use MAP eta estimate for 
+  # uncollapsing and unless otherwise specified against, use only the 
+  # posterior mean for Lambda and Sigma 
+  if (is.null(fitc$Samples)) {
+    fitc$Samples <- add_array_dim(fitc$Pars, 3)
+    ret_mean <- args_null("ret_mean", args, TRUE)
+    if (ret_mean && n_samples>0){
+      warning("Laplace Approximation Failed, using MAP estimate of eta", 
+              " to obtain Posterior mean of Lambda and Sigma", 
+              " (i.e., not sampling from posterior distribution of Lambda or Sigma)")
+    }
+    if (!ret_mean && n_samples > 0){
+      warning("Laplace Approximation Failed, using MAP estimate of eta", 
+              "but ret_mean was manually specified as FALSE so sampling", 
+              "from posterior of Lambda and Sigma rather than using posterior mean")
+    }
+  } else {
+    ret_mean <- args_null("ret_mean", args, FALSE)
+  }
   
-  # timer <- c(timerc, timeru)
-  # timer <- timer[which(names(timer)!="Overall")]
-  # timer <- c(timer, 
-  #            "Overall" = unname(timerc["Overall"]) +  unname(timeru["Overall"]), 
-  #            "Uncollapse_Overall" = timeru["Overall"])
+  seed <- args_null("seed", args, sample(1:2^15, 1))
+  ## uncollapse collapsed model ##
+  if(ret_mean) {
+    apply_smoother <- FALSE
+  }
+  # ret_mean overrides sample returning for now
+  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, W_scale, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
+
+  timeru <- parse_timer_seconds(fitu$Timer)
+  
+  timer <- c(timerc, timeru)
+  timer <- timer[which(names(timer)!="Overall")]
+  timer <- c(timer, 
+             "Overall" = unname(timerc["Overall"]) +  unname(timeru["Overall"]), 
+             "Uncollapse_Overall" = timeru["Overall"])
   
   
-  # # # Marginal Likelihood Computation
-  # # # d <- D^2 + N*D + D*Q
-  # # # logMarginalLikelihood <- fitc$LogLik+d/2*log(2*pi)+.5*fitc$logInvNegHessDet-d/2*log(N)
+  # # Marginal Likelihood Computation
+  # # d <- D^2 + N*D + D*Q
+  # # logMarginalLikelihood <- fitc$LogLik+d/2*log(2*pi)+.5*fitc$logInvNegHessDet-d/2*log(N)
     
-  # ## pretty output ##
-  # out <- list()
-  # if ("Eta" %in% pars){
-  #   out[["Eta"]] <- fitc$Samples
-  # }
-  # if ("Thetas_filtered" %in% pars & !ret_mean){
-  #   out[["Thetas_filtered"]] <- fitu$Thetas_filtered_sample
-  # }
-  # if ("Thetas_smoothed" %in% pars & !ret_mean){
-  #   out[["Thetas_smoothed"]] <- fitu$Thetas_smoothed_sample
-  # }
-  # if ("Sigma" %in% pars){
-  #   out[["Sigma"]] <- fitu$Sigma
-  # }
+  ## pretty output ##
+  out <- list()
+  if ("Eta" %in% pars){
+    out[["Eta"]] <- fitc$Samples
+  }
+  if ("Thetas_filtered" %in% pars & !ret_mean){
+    out[["Thetas_filtered"]] <- fitu$Thetas_filtered_sample
+  }
+  if ("Thetas_smoothed" %in% pars & !ret_mean){
+    out[["Thetas_smoothed"]] <- fitu$Thetas_smoothed_sample
+  }
+  if ("Sigma" %in% pars){
+    out[["Sigma"]] <- fitu$Sigma
+  }
   
-  # # # By default just returns all other parameters
-  # out$D <- D
-  # out$N <- N
-  # out$T <- T
-  # out$coord_system <- "alr"
-  # out$iter <- dim(fitc$Samples)[3]
-  # out$upsilonT <- fitc$upsilonT
-  # out$XiT <- fitc$XiT
-  # out$alr_base <- D
-  # out$Y <- Y
-  # out$upsilon <- upsilon
-  # out$gamma <- gamma
-  # out$F <- F
-  # out$G <- G
-  # out$W <- W
-  # out$W <- W_scale
-  # out$M0 <- M0
-  # out$C0 <- C0
-  # out$observations <- observations
-  # out$init <- init
-  # # # for other methods
-  # out$summary <- NULL
-  # out$Timer <- timer
-  # # #out$logMarginalLikelihood <- logMarginalLikelihood
-  # attr(out, "class") <- c("labraduckfit", "pibblefit")
-  # # add names if present 
-  # if (use_names) out <- name(out)
-  # verify(out) # verify the labraduckfit object
-  # return(out)
+  # # By default just returns all other parameters
+  out$D <- D
+  out$N <- N
+  out$T <- T
+  out$coord_system <- "alr"
+  out$iter <- dim(fitc$Samples)[3]
+  out$upsilonT <- fitc$upsilonT
+  out$XiT <- fitc$XiT
+  out$alr_base <- D
+  out$Y <- Y
+  out$upsilon <- upsilon
+  out$gamma <- gamma
+  out$F <- F
+  out$G <- G
+  out$W <- W
+  out$W_scale <- W_scale
+  out$M0 <- M0
+  out$C0 <- C0
+  out$observations <- observations
+  out$init <- init
+  # # for other methods
+  out$summary <- NULL
+  out$Timer <- timer
+  # #out$logMarginalLikelihood <- logMarginalLikelihood
+  attr(out, "class") <- c("labraduckfit", "pibblefit")
+  # add names if present 
+  if (use_names) out <- name(out)
+  verify(out) # verify the labraduckfit object
+  return(out)
 }
 

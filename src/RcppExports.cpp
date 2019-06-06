@@ -371,19 +371,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // dlm_U
-Eigen::MatrixXd dlm_U(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert);
-RcppExport SEXP _stray_dlm_U(SEXP gammaSEXP, SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP C0SEXP, SEXP observationsSEXP, SEXP invertSEXP) {
+Eigen::MatrixXd dlm_U(Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations);
+RcppExport SEXP _stray_dlm_U(SEXP FSEXP, SEXP GSEXP, SEXP WSEXP, SEXP C0SEXP, SEXP observationsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type F(FSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type G(GSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type W(WSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type C0(C0SEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type observations(observationsSEXP);
-    Rcpp::traits::input_parameter< bool >::type invert(invertSEXP);
-    rcpp_result_gen = Rcpp::wrap(dlm_U(gamma, F, G, W, C0, observations, invert));
+    rcpp_result_gen = Rcpp::wrap(dlm_U(F, G, W, C0, observations));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -510,7 +508,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stray_lmvgamma_deriv", (DL_FUNC) &_stray_lmvgamma_deriv, 2},
     {"_stray_power_G", (DL_FUNC) &_stray_power_G, 3},
     {"_stray_dlm_B", (DL_FUNC) &_stray_dlm_B, 4},
-    {"_stray_dlm_U", (DL_FUNC) &_stray_dlm_U, 7},
+    {"_stray_dlm_U", (DL_FUNC) &_stray_dlm_U, 5},
     {"_stray_eigen_lap_test", (DL_FUNC) &_stray_eigen_lap_test, 4},
     {"_stray_cholesky_lap_test", (DL_FUNC) &_stray_cholesky_lap_test, 4},
     {"_stray_LaplaceApproximation_test", (DL_FUNC) &_stray_LaplaceApproximation_test, 5},

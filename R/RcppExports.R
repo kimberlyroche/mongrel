@@ -415,8 +415,8 @@ dlm_B <- function(F, G, M0, observations) {
     .Call('_stray_dlm_B', PACKAGE = 'stray', F, G, M0, observations)
 }
 
-dlm_U <- function(gamma, F, G, W, C0, observations, invert) {
-    .Call('_stray_dlm_U', PACKAGE = 'stray', gamma, F, G, W, C0, observations, invert)
+dlm_U <- function(F, G, W, C0, observations) {
+    .Call('_stray_dlm_U', PACKAGE = 'stray', F, G, W, C0, observations)
 }
 
 eigen_lap_test <- function(n_samples, m, S, eigvalthresh) {

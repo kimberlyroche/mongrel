@@ -211,9 +211,10 @@ plot_element_distros <- function(fit_models, W_scales, percent_sample=0.1, save_
 }
 
 # assumes both smoother and filter have been run!
-plot_posterior <- function(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path="", append_str="") {
+plot_posterior <- function(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path="", append_str="", lr_idx=1) {
   # plot the first sample of (1) log-transformed Y (2) approximated eta (3) filtered Theta (with F applied)
   # these should be similar
+  show_Eta <- FALSE # can add back at will
   T <- max(observations)
   N <- length(observations)
   filtered_ymin <- rep(Inf, T)
@@ -223,7 +224,6 @@ plot_posterior <- function(Y, fit, F, observations, baboon, show_filtered=FALSE,
   Ft <- t(F)
   Q <- length(F)
   lr <- driver::alr(t(Y + 0.5))
-  lr_idx <- 1 # arbitrary
   n_samples <- dim(fit$Eta)[3]
   D <- dim(fit$Eta)[1]+1
   for(s in 1:n_samples) {
@@ -256,6 +256,10 @@ plot_posterior <- function(Y, fit, F, observations, baboon, show_filtered=FALSE,
   # don't show eta for now since there are multiple samples for every time point and logratio for eta
   # how best to represent?
   df <- data.frame(timepoint=as(observations, "vector"), alrY=lr[,lr_idx])
+  if(show_Eta) {
+    df2 <- data.frame(timepoint=as(observations, "vector"), eta_hat=fit$Eta[lr_idx,,n_samples]) # just use the last sample
+    df <- merge(df, df2, by='timepoint', all=TRUE)
+  }
   if(show_filtered) {
     df2 <- data.frame(timepoint=1:(T-1), ymin_f=filtered_ymin[1:(T-1)], ymax_f=filtered_ymax[1:(T-1)])
     df <- merge(df, df2, by='timepoint', all=TRUE)
@@ -267,8 +271,11 @@ plot_posterior <- function(Y, fit, F, observations, baboon, show_filtered=FALSE,
     p <- p + geom_ribbon(aes(ymin=ymin_f, ymax=ymax_f), fill = "grey90")
   }
   p <- p + geom_ribbon(aes(ymin=ymin_s, ymax=ymax_s), fill = "grey80") +
-    geom_point(aes(x=timepoint, y=alrY), color="blue") +
-    theme_minimal() +
+    geom_point(aes(x=timepoint, y=alrY), color="blue")
+  if(show_Eta) {
+    p <- p + geom_point(aes(x=timepoint, y=eta_hat), color="red")
+  }
+  p <- p + theme_minimal() +
     ylab("ALR(Bifidobacteriaceae/Helicobacteraceae)")
   width <- round(log(T/100)*3)
   ggsave(filename=paste0(save_path,"/",baboon,"_Theta_smoothed",append_str,".png"),
@@ -283,7 +290,7 @@ record_time <- function(fit, baboon, save_path="", append_str="") {
   sink()
 }
 
-fit_model <- function(indiv_data, W, W_scale, F, n_samples=2000, ret_mean=FALSE, apply_smoother=FALSE, subset_time=TRUE) {
+fit_model <- function(indiv_data, W, W_scale_init, F, n_samples=2000, ret_mean=FALSE, apply_smoother=FALSE, subset_time=TRUE) {
   Y_full <- indiv_data$ys
   alr_Y_full <- driver::alr(Y_full + 0.5)
   alr_means <- colMeans(alr_Y_full)
@@ -312,7 +319,7 @@ fit_model <- function(indiv_data, W, W_scale, F, n_samples=2000, ret_mean=FALSE,
   omega <- 2*pi/365
   G <- matrix(c(cos(omega), -sin(omega), 0, sin(omega), cos(omega), 0, 0, 0, 1), 3, 3)
   C0 <- W*10
-  gamma <- 1/W_scale
+  gamma <- 1
 
   D <- nrow(Y)
   # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
@@ -321,7 +328,7 @@ fit_model <- function(indiv_data, W, W_scale, F, n_samples=2000, ret_mean=FALSE,
   upsilon <- D+10
   Xi <- diag(D-1)
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
-                   gamma=gamma, F=F, G=G, W=W, W_scale=W_scale, M0=M0, C0=C0, observations=observations,
+                   gamma=gamma, F=F, G=G, W=W, W_scale_init=log(W_scale_init), M0=M0, C0=C0, observations=observations,
                    max_iter=100000, decomp_method="eigen", n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother)
   return(list(fit=fit, Y=Y, observations=observations))
 }
@@ -332,13 +339,13 @@ best_sampled <- c("DUI")
 W <- matrix(0, 3, 3)
 F <- matrix(c(1, 0, 1), 3, 1)
 
-W_scales <- c(0.005, 0.01, 0.02, 0.03, 0.05, 0.1)
+W_scale_init <- 1
 fit_models <- list()
 
 ret_mean <- FALSE # sample from Sigma | eta
 n_samples <- 2000
 
-verbose <- FALSE
+verbose <- TRUE
 subset_time <- TRUE
 apply_smoother <- TRUE
 
@@ -348,37 +355,35 @@ baboon <- "DUI"
 w <- 1
 
 for(baboon in best_sampled) {
-  for(w in 1:length(W_scales)) {
-    cat("Fitting",baboon,"over all taxa...\n")
-    load(paste0("C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data/",baboon,"_data.RData"))
+  cat("Fitting",baboon,"over all taxa...\n")
+  load(paste0("C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data/",baboon,"_data.RData"))
   
-    diag(W) <- c(1, 1, 1/100)
-    append_str <- paste0("_W",w)
+  diag(W) <- c(1, 1, 1/100)
+  append_str <- paste0("_W",w)
+  
+  fit_all <- fit_model(indiv_data, W, W_scale_init, F, n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother, subset_time=TRUE)
+  fit_models[[length(fit_models)+1]] <- fit_all$fit
+  fit <- fit_all$fit
+  Y <- fit_all$Y
+  observations <- fit_all$observations
 
-    fit_all <- fit_model(indiv_data, W, log(W_scales[w]), F, n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother, subset_time=TRUE)
-    log(fit_models[[length(fit_models)+1]] <- fit_all$fit
-    fit <- fit_all$fit
-    Y <- fit_all$Y
-    observations <- fit_all$observations
-    
-    if(verbose & ret_mean) {
-      plot_Sigma(fit, Y, baboon, save_path=paste0(save_path,"/plots"), append=append_str, as_corr=FALSE)
-      plot_Sigma(fit, Y, baboon, save_path=paste0(save_path,"/plots"), append=paste0(append_str,"_corr"), as_corr=TRUE)
-    }
-    if(verbose & !ret_mean) {
-      plot_posterior(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path=paste0(save_path,"/plots"), append_str=append_str)
-      plot_posterior(Y, fit, F, observations, baboon, show_filtered=TRUE, save_path=paste0(save_path,"/plots"), append_str=paste0(append_str,"_filter"))
-    }
-    if(verbose & !ret_mean) {
-      record_time(fit, baboon, save_path=paste0(save_path,"/time"), append=append_str)
-    }
+  if(verbose & ret_mean) {
+    plot_Sigma(fit, Y, baboon, save_path=paste0(save_path,"/plots"), append=append_str, as_corr=FALSE)
+    #plot_Sigma(fit, Y, baboon, save_path=paste0(save_path,"/plots"), append=paste0(append_str,"_corr"), as_corr=TRUE)
+  }
+  if(verbose & !ret_mean) {
+    plot_posterior(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path=paste0(save_path,"/plots"), append_str=append_str, lr_idx=1)
+    #plot_posterior(Y, fit, F, observations, baboon, show_filtered=TRUE, save_path=paste0(save_path,"/plots"), append_str=paste0(append_str,"_filter"))
+  }
+  if(verbose & !ret_mean) {
+    #record_time(fit, baboon, save_path=paste0(save_path,"/time"), append=append_str)
   }
 }
 
 if(verbose & n_samples > 0) {
-  plot_distance_distros(fit_models, save_path)
-  plot_distant_samples(fit_models, save_path)
-  plot_element_distros(fit_models, W_scales=W_scales, percent_sample=0.1, save_path=save_path)
+#  plot_distance_distros(fit_models, save_path)
+#  plot_distant_samples(fit_models, save_path)
+#  plot_element_distros(fit_models, W_scales=W_scales, percent_sample=0.1, save_path=save_path)
 }
 
 

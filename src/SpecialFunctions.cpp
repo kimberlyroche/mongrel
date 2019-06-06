@@ -85,9 +85,9 @@ Eigen::MatrixXd dlm_B(Eigen::MatrixXd F, Eigen::MatrixXd G, Eigen::MatrixXd M0, 
   return(B);
 }
 
-// build U matrix (unscaled covariance over samples) assuming time-invariant parameters F, G, W, gamma
+// build U matrix (unscaled covariance over samples) assuming time-invariant parameters F, G, W
 // [[Rcpp::export]]
-Eigen::MatrixXd dlm_U(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations, bool invert) {
+Eigen::MatrixXd dlm_U(Eigen::VectorXd F, Eigen::MatrixXd G, Eigen::MatrixXd W, Eigen::MatrixXd C0, Eigen::VectorXd observations) {
   // check T >= 1
   int N = observations.size();
   int T = observations.maxCoeff();
@@ -103,7 +103,6 @@ Eigen::MatrixXd dlm_U(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen:
       if(t1_incr == t2_incr) {
         t = observations(t1_incr);
         // diagonal
-        res(t1_incr, t1_incr) += gamma;
         res(t1_incr, t1_incr) += (Ft*W*F)(0,0); // 1x1 vector product
         for(int ell=t; ell>=2; ell--) {
           res(t1_incr, t1_incr) += (Ft*power_G(G, t, ell)*W*power_G(Gt, ell, t)*F)(0,0); // 1x1 vector
@@ -127,9 +126,6 @@ Eigen::MatrixXd dlm_U(double gamma, Eigen::VectorXd F, Eigen::MatrixXd G, Eigen:
         }
       }
     }
-  }
-  if(invert) {
-    return(res.inverse());
   }
   return res;
 }
