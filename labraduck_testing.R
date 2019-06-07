@@ -275,10 +275,21 @@ plot_posterior <- function(Y, fit, F, observations, baboon, show_filtered=FALSE,
   if(show_Eta) {
     p <- p + geom_point(aes(x=timepoint, y=eta_hat), color="red")
   }
-  p <- p + theme_minimal() +
-    ylab("ALR(Bifidobacteriaceae/Helicobacteraceae)")
+  # cherry picking a high abundance pair and a low abundance pair (roughly anticorrelated with pair #1)
+  p <- p + theme_minimal()
+  if(lr_idx == 1) {
+    p <- p + ylab("ALR(Bifidobacteriaceae/Helicobacteraceae)")
+  } else if(lr_idx == 2) {
+    p <- p + ylab("ALR(Prevotellaceae/Helicobacteraceae)")
+  } else if(lr_idx == 21) {
+    p <- p + ylab("ALR(Christensenellaceae/Helicobacteraceae)")
+  } else {
+    # index 25
+    p <- p + ylab("ALR(Lactobacillaceae/Helicobacteraceae)")
+  }
+  #p <- p + ylim(-10,10.5)
   width <- round(log(T/100)*3)
-  ggsave(filename=paste0(save_path,"/",baboon,"_Theta_smoothed",append_str,".png"),
+  ggsave(filename=paste0(save_path,"/",baboon,"_Theta_smoothed",append_str,"_LR",lr_idx,".png"),
          units="in", scale=2, width=width, height=2)
 }
 
@@ -290,7 +301,8 @@ record_time <- function(fit, baboon, save_path="", append_str="") {
   sink()
 }
 
-fit_model <- function(indiv_data, W, W_scale_init, F, n_samples=2000, ret_mean=FALSE, apply_smoother=FALSE, subset_time=TRUE) {
+fit_model <- function(indiv_data, W, W_scale_init, gamma_scale_init, F, n_samples=2000, ret_mean=FALSE,
+                      apply_smoother=FALSE, subset_time=TRUE, useSylv=FALSE) {
   Y_full <- indiv_data$ys
   alr_Y_full <- driver::alr(Y_full + 0.5)
   alr_means <- colMeans(alr_Y_full)
@@ -316,75 +328,78 @@ fit_model <- function(indiv_data, W, W_scale_init, F, n_samples=2000, ret_mean=F
     observations <- matrix(observations_full, nrow=1)
   }
 
+  D <- nrow(Y)
+  N <- length(observations)
+  if(N < (D-1)) {
+    cat("Too few observations (",N,")...\n")
+    #return(NULL)
+  }
   omega <- 2*pi/365
   G <- matrix(c(cos(omega), -sin(omega), 0, sin(omega), cos(omega), 0, 0, 0, 1), 3, 3)
   C0 <- W*10
-  gamma <- 1
+  scale_init <- c(log(gamma_scale_init), log(W_scale_init))
 
-  D <- nrow(Y)
   # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
   M0 <- matrix(1, 3, D-1)
   M0[3,] <- alr_means
   upsilon <- D+10
   Xi <- diag(D-1)
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
-                   gamma=gamma, F=F, G=G, W=W, W_scale_init=log(W_scale_init), M0=M0, C0=C0, observations=observations,
-                   max_iter=100000, decomp_method="eigen", n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother)
+                   gamma=gamma, F=F, G=G, W=W, scale_init=scale_init, M0=M0, C0=C0, observations=observations,
+                   max_iter=100000, b1=0.95, step_size=0.002, eps_f=1e-11, decomp_method="eigen", n_samples=n_samples, ret_mean=ret_mean,
+                   apply_smoother=apply_smoother, useSylv=useSylv)
   return(list(fit=fit, Y=Y, observations=observations))
 }
 
 best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
-best_sampled <- c("DUI")
 
-W <- matrix(0, 3, 3)
-F <- matrix(c(1, 0, 1), 3, 1)
-
-W_scale_init <- 1
-fit_models <- list()
-
-ret_mean <- FALSE # sample from Sigma | eta
-n_samples <- 2000
-
-verbose <- TRUE
 subset_time <- TRUE
-apply_smoother <- TRUE
 
-save_path <- "C:/Users/kim/Desktop/rules_of_life_stray_run1"
-
-baboon <- "DUI"
-w <- 1
+save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
 
 for(baboon in best_sampled) {
   cat("Fitting",baboon,"over all taxa...\n")
   load(paste0("C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data/",baboon,"_data.RData"))
   
-  diag(W) <- c(1, 1, 1/100)
-  append_str <- paste0("_W",w)
+  W <- matrix(0, 3, 3)
+  F <- matrix(c(1, 0, 1), 3, 1)
   
-  fit_all <- fit_model(indiv_data, W, W_scale_init, F, n_samples=n_samples, ret_mean=ret_mean, apply_smoother=apply_smoother, subset_time=TRUE)
-  fit_models[[length(fit_models)+1]] <- fit_all$fit
-  fit <- fit_all$fit
-  Y <- fit_all$Y
-  observations <- fit_all$observations
+  gamma_scale_init <- 1
+  W_scale_init <- 1
+  
+  diag(W) <- c(1, 1, 1/100)
 
-  if(verbose & ret_mean) {
-    plot_Sigma(fit, Y, baboon, save_path=paste0(save_path,"/plots"), append=append_str, as_corr=FALSE)
-    #plot_Sigma(fit, Y, baboon, save_path=paste0(save_path,"/plots"), append=paste0(append_str,"_corr"), as_corr=TRUE)
-  }
-  if(verbose & !ret_mean) {
-    plot_posterior(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path=paste0(save_path,"/plots"), append_str=append_str, lr_idx=1)
-    #plot_posterior(Y, fit, F, observations, baboon, show_filtered=TRUE, save_path=paste0(save_path,"/plots"), append_str=paste0(append_str,"_filter"))
-  }
-  if(verbose & !ret_mean) {
-    #record_time(fit, baboon, save_path=paste0(save_path,"/time"), append=append_str)
+  fit_obj <- fit_model(indiv_data, W, W_scale_init, gamma_scale_init, F,
+                       n_samples=2000, ret_mean=FALSE,
+                       apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
+  
+  if(!is.null(fit_obj)) {
+    fit <- fit_obj$fit
+    Y <- fit_obj$Y
+    observations <- fit_obj$observations
+  
+    # high abundance
+    plot_posterior(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path=save_path, lr_idx=1)
+    plot_posterior(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path=save_path, lr_idx=2)
+    # low abundance
+    plot_posterior(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path=save_path, lr_idx=20)
+    plot_posterior(Y, fit, F, observations, baboon, show_filtered=FALSE, save_path=save_path, lr_idx=25)
+    
+    fit_obj <- fit_model(indiv_data, W, W_scale_init, gamma_scale_init, F,
+                         n_samples=0, ret_mean=TRUE,
+                         apply_smoother=FALSE, subset_time=subset_time)
+    fit <- fit_obj$fit
+    Y <- fit_obj$Y
+    plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=FALSE)
   }
 }
 
-if(verbose & n_samples > 0) {
-#  plot_distance_distros(fit_models, save_path)
-#  plot_distant_samples(fit_models, save_path)
-#  plot_element_distros(fit_models, W_scales=W_scales, percent_sample=0.1, save_path=save_path)
-}
+# no longer in use now that the scales of W and gamma are being optimized; we cannot fix these
+# if(verbose > 1 & n_samples > 0) {
+#   plot_distance_distros(fit_models, save_path)
+#   plot_distant_samples(fit_models, save_path)
+#   plot_element_distros(fit_models, W_scales=W_scales, percent_sample=0.1, save_path=save_path)
+# }
 
 
 

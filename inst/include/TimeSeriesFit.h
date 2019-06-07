@@ -25,7 +25,7 @@ class TimeSeriesFit
     const MatrixXd G;
     const MatrixXd W;
     const double W_scale;
-    const double gamma;
+    const double gamma_scale;
     const int upsilon;
     const MatrixXd Xi;
     const MatrixXd M0;
@@ -46,13 +46,13 @@ class TimeSeriesFit
                   const MatrixXd G_,
                   const MatrixXd W_,
                   const double W_scale_,
-                  const double gamma_,
+                  const double gamma_scale_,
                   const int upsilon_, 
                   const MatrixXd Xi_,
                   const MatrixXd M0_,
                   const MatrixXd C0_,
                   const VectorXd observations_) :
-    F(F_), G(G_), W(W_), W_scale(W_scale_), gamma(gamma_), upsilon(upsilon_), Xi(Xi_), M0(M0_), C0(C0_), observations(observations_)
+    F(F_), G(G_), W(W_), W_scale(W_scale_), gamma_scale(gamma_scale_), upsilon(upsilon_), Xi(Xi_), M0(M0_), C0(C0_), observations(observations_)
     {
       // note: eta is transposed in the DLM specification!
       filtered = false;
@@ -113,7 +113,7 @@ class TimeSeriesFit
         } else {
           // one-step ahead observation forecast
           ft_t = Ft*A_t;
-          q_t = gamma + (Ft*R_t*F)(0,0);
+          q_t = gamma_scale + (Ft*R_t*F)(0,0);
           // system posterior at t
           et_t = eta.row(curr_obs_idx) - ft_t;
           S_t = R_t*F/q_t;

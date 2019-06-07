@@ -18,7 +18,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     const MatrixXd B;
     const MatrixXd KInv;
     const MatrixXd U;
-    const double gamma;
+    double gamma;
     MatrixXd A;
     MatrixXd AInv; // AInv = (gamma*I + W_scale*U)^{-1}
     // computed quantities 
@@ -26,6 +26,7 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     int N;
     int P;
     double delta;
+    double phi;
     Eigen::ArrayXd m;
     Eigen::RowVectorXd n;
     MatrixXd S;  // I_D-1 + KEAE'
@@ -50,26 +51,27 @@ class LabraduckCollapsed : public Numer::MFuncGrad
                         const MatrixXd B_,
                         const MatrixXd KInv_,
                         const MatrixXd U_,
-                        const double gamma_,
                         bool sylv=false) :
-    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), U(U_), gamma(gamma_)
+    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), U(U_)
     {
       D = Y.rows();           // number of multinomial categories
       N = Y.cols();           // number of samples
-      P = 1;                  // single scalar for W
+      P = 2;                  // number of scale parameters
       n = Y.colwise().sum();  // total number of counts per sample
       delta = 0.5*(upsilon + N + D - 2.0);
+      phi = 0.5*(D-1);
       this->sylv = sylv;
     }
     ~LabraduckCollapsed(){}        
     
     // Update with Eta when it comes in as a vector
-    void updateWithEtaLL(const Ref<const VectorXd>& etavec, const Ref<const VectorXd>& W_scale){
+    void updateWithEtaLL(const Ref<const VectorXd>& etavec, const Ref<const VectorXd>& scale_pars){
       const Map<const MatrixXd> eta(etavec.data(), D-1, N);
       E = eta - B;
 
-      double e_alpha = exp(W_scale(0));
-      A = gamma*MatrixXd::Identity(N,N) + e_alpha*U;
+      double e_gamma = exp(scale_pars(0));
+      double e_W = exp(scale_pars(1));
+      A = e_gamma*MatrixXd::Identity(N,N) + e_W*U;
       Adec.compute(A);
       AInv = Adec.inverse();
       if (sylv & (N < (D-1))){
@@ -129,12 +131,12 @@ class LabraduckCollapsed : public Numer::MFuncGrad
         ld += log(std::abs(lii));
       }
       ld += log(c);
-      ll -= 0.5*(D-1)*ld; // repeated can speed up in future
+      ll -= phi*ld; // repeated can speed up in future
       return ll;
     }
     
     // Must have called updateWithEtaLL and then updateWithEtaGH first 
-    VectorXd calcGrad(const Ref<const VectorXd>& W_scale){
+    VectorXd calcGrad(const Ref<const VectorXd>& scale_pars){
       // For Multinomial
       MatrixXd g = (Y.topRows(D-1) - (rhomat.array().rowwise()*n.array())).matrix();
       //Rcout << "dim Y:" << Y.size() << std::endl;
@@ -147,21 +149,46 @@ class LabraduckCollapsed : public Numer::MFuncGrad
         g.noalias() += -delta*(R + R.transpose())*C.transpose();        
       }
       Map<VectorXd> grad_eta(g.data(), g.size());
-      // gradient for W_scale
-      MatrixXd M = AInv*(E.transpose())*R*E*AInv;
+      MatrixXd M;
+      VectorXd grad(grad_eta.size() + P);
       VectorXd g2(1);
-      g2(0) = delta*(M.array()*U.array()).sum();
-      g2(0) -= 0.5*(D-1)*(AInv.array()*U.array()).sum();
-      g2(0) = exp(W_scale(0))*g2(0);
-      VectorXd grad(grad_eta.size() + 1);
-      grad << grad_eta, g2;
+      VectorXd g3(1);
+      if (sylv & (N < (D-1))){
+        M = AInv*(E.transpose())*C*R;
+        // gradient for gamma scale
+        // Frobenius inner product may work if I can convince myself this whole product is symmetric (TODO)
+        g2(0) = delta*M.diagonal().sum();
+        g2(0) -= phi*AInv.diagonal().sum();
+        g2(0) = exp(scale_pars(0))*g2(0);
+        // gradient for W scale
+        g3(0) = delta*(M*U).diagonal().sum();
+        g3(0) -= phi*(AInv*U).diagonal().sum();
+        g3(0) = exp(scale_pars(1))*g3(0);
+      } else {
+        M = C*R*E*AInv;
+        // gradient for gamma scale
+        // Frobenius inner product may work if I can convince myself this whole product is symmetric (TODO)
+        g2(0) = delta*M.diagonal().sum();
+        g2(0) -= phi*AInv.diagonal().sum();
+        g2(0) = exp(scale_pars(0))*g2(0);
+        // gradient for W scale
+        g3(0) = delta*(M*U).diagonal().sum();
+        g3(0) -= phi*(AInv*U).diagonal().sum();
+        g3(0) = exp(scale_pars(1))*g3(0);
+      }
+      grad << grad_eta, g2, g3;
       return grad; // not transposing (leaving as vector)
     }
     
     
     // Must have called updateWithEtaLL and then updateWithEtaGH first 
-    MatrixXd calcHess(){
-      // TODO: add back in Sylvester's theorem bit
+    MatrixXd calcHess(const Ref<const VectorXd>& etavec, const Ref<const VectorXd>& scale_pars){
+      bool tmp_sylv = sylv;
+      if (sylv & (N < (D-1))){
+        this->sylv=false;
+        updateWithEtaLL(etavec, scale_pars);
+        updateWithEtaGH();
+      }
       // for MatrixVariate T
       MatrixXd H(N*(D-1), N*(D-1));
       MatrixXd RCT(D-1, N);
@@ -201,16 +228,18 @@ class LabraduckCollapsed : public Numer::MFuncGrad
         H.block(j*(D-1), j*(D-1), D-1, D-1).noalias()  += n_parallel(j)*W;
       }
       }
+      // Turn back on sylv option if it was wanted:
+      this->sylv = tmp_sylv;
       return H;
     }
     
     // function for use by ADAMOptimizer wrapper (and for RcppNumeric L-BFGS)
     virtual double f_grad(Numer::Constvec& pars, Numer::Refvec grad){
       const Map<const VectorXd> eta(pars.head(N*(D-1)).data(), N*D-1);
-      const Map<const VectorXd> W_scale(pars.tail(P).data(), P); // may want to scale blocks of W separately in future
-      updateWithEtaLL(eta, W_scale);    // precompute things needed for LogLik
+      const Map<const VectorXd> scale_pars(pars.tail(P).data(), P); // may want to scale blocks of W separately in future
+      updateWithEtaLL(eta, scale_pars);    // precompute things needed for LogLik
       updateWithEtaGH();       // precompute things needed for gradient and hessian
-      grad = -calcGrad(W_scale);      // negative because wraper minimizes
+      grad = -calcGrad(scale_pars);      // negative because wraper minimizes
       return -calcLogLik(eta); // negative because wraper minimizes
     }
 };

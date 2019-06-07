@@ -9,11 +9,10 @@
 #' @param Xi (D-1)x(D-1) prior covariance matrix
 #'   (default: ALR transform of diag(1)*(upsilon-D)/2 - this is 
 #'   essentially iid on "base scale" using Aitchison terminology)
-#' @param gamma Scale associated with observation-level variance (see model)
 #' @param F Observation-level transformation matrix (see model)
 #' @param G System-level transformation matrix (see model)
 #' @param W System-level noise covariance (of dim Q) over rows of eta transpose (see model)
-#' @param W_scale_init System-level scale initialization for W, gamma, and C0 (this parameterization gives computational convenience in optimization)
+#' @param scale_init Scale initialization system (W) and observation level (gamma) noise
 #' @param M0 Prior mean over system matrix
 #' @param C0 Prior covariance over system-level noise
 #' @param observations Vector timepoints indicating offset from first observation (labeled 1)
@@ -36,7 +35,7 @@ NULL
 
 #' @rdname labraduck_fit
 #' @export
-labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale_init, M0, C0, observations,
+labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, scale_init, M0, C0, observations,
                     init=NULL, pars=c("Eta", "Sigma", "Thetas_filtered", "Thetas_smoothed"),
                     ...){
   args <- list(...)
@@ -73,7 +72,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale_ini
     # create pibblefit object and pass to sample_prior then return
     # untested (TODO)
     out <- labraduckfit(N=N, D=D, T=T, coord_system="alr", alr_base=D, upsilon=upsilon, Xi=Xi,
-      gamma=gamma, F=F, G=G, W=W, W_scale_init=W_scale_init, M0=M0, C0=C0, observations=observations)
+      gamma_init=gamma_init, F=F, G=G, W=W, W_scale_init=W_scale_init, M0=M0, C0=C0, observations=observations)
     out <- sample_prior(out, n_samples=n_samples, pars=pars, use_names=use_names)
     return(out)
   } else {
@@ -102,7 +101,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale_ini
   apply_smoother <- args_null("apply_smoother", args, TRUE)
   
   # ## fit collapsed model ##
-  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, gamma, F, G, W, M0, C0, observations, init, W_scale_init, n_samples, 
+  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, F, G, W, M0, C0, observations, init, scale_init, n_samples, 
                                 calcGradHess, b1, b2, step_size, epsilon, eps_f, 
                                 eps_g, max_iter, verbose, verbose_rate, 
                                 decomp_method, optim_method, eigvalthresh, 
@@ -110,6 +109,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale_ini
                                 useSylv, ncores)
   timerc <- parse_timer_seconds(fitc$Timer)
 
+  gamma_scale <- fitc$gamma_scale
   W_scale <- fitc$W_scale
 
   out <- list()
@@ -140,7 +140,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale_ini
     apply_smoother <- FALSE
   }
   # ret_mean overrides sample returning for now
-  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, W_scale, gamma, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
+  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, W_scale, gamma_scale, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
 
   timeru <- parse_timer_seconds(fitu$Timer)
   
@@ -181,7 +181,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, gamma, F, G, W, W_scale_ini
   out$alr_base <- D
   out$Y <- Y
   out$upsilon <- upsilon
-  out$gamma <- gamma
+  out$gamma_scale <- gamma_scale
   out$F <- F
   out$G <- G
   out$W <- W

@@ -14,7 +14,6 @@ using Eigen::VectorXd;
 List optimLabraduckCollapsed(const Eigen::ArrayXXd Y, 
                const double upsilon, 
                const Eigen::MatrixXd Xi,
-               const double gamma,
                const Eigen::MatrixXd F,
                const Eigen::MatrixXd G,
                const Eigen::MatrixXd W,
@@ -22,7 +21,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
                const Eigen::MatrixXd C0,
                const Eigen::VectorXd observations, 
                Eigen::MatrixXd init, 
-               Eigen::VectorXd W_scale_init,
+               Eigen::VectorXd scale_init,
                int n_samples=2000, 
                bool calcGradHess = true,
                double b1 = 0.9,         
@@ -55,20 +54,22 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   MatrixXd KInv = Xi.inverse();
   MatrixXd U = dlm_U(F, G, W, C0, observations); // this is explicitly missing (1) scale W_scale (2) gamma on the diagonal
 
-  Rcout << "Initializing log(W_scale)=" << W_scale_init(0) << std::endl;
-  Rcout << "                  W_scale=" << exp(W_scale_init(0)) << std::endl;
+  Rcout << "Initializing log(gamme_scale)=" << scale_init(0) << std::endl;
+  Rcout << "                  gamma_scale=" << exp(scale_init(0)) << std::endl;
+  Rcout << "Initializing log(W_scale)=" << scale_init(1) << std::endl;
+  Rcout << "                  W_scale=" << exp(scale_init(1)) << std::endl;
 
-  LabraduckCollapsed cm(Y, upsilon, B, KInv, U, gamma, useSylv);
+  LabraduckCollapsed cm(Y, upsilon, B, KInv, U, useSylv);
 
   Map<VectorXd> eta(init.data(), init.size()); // will rewrite by optim
-  VectorXd pars(init.size() + W_scale_init.size());
+  VectorXd pars(init.size() + scale_init.size());
   pars.head(init.size()) = eta;
-  pars.tail(W_scale_init.size()) = W_scale_init;
+  pars.tail(scale_init.size()) = scale_init;
 
   double nllopt; // NEGATIVE LogLik at optim
-  List out(9);
+  List out(10);
   out.names() = CharacterVector::create("LogLik", "Gradient", "Hessian",
-            "Pars", "Samples", "W_scale", "Timer", "logInvNegHessDet", "B");
+            "Pars", "Samples", "gamma_scale", "W_scale", "Timer", "logInvNegHessDet", "B");
   
   // Pick optimizer (ADAM - without perturbation appears to be best)
   //   ADAM with perturbations not fully implemented
@@ -87,23 +88,26 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   if (status<0)
     Rcpp::warning("Max Iterations Hit, May not be at optima");
   eta = pars.head(init.size());
+  Map<VectorXd> etavec(eta.data(), (D-1)*N);
   Map<MatrixXd> etamat(eta.data(), D-1, N);
-  Map<VectorXd> W_scale(pars.tail(W_scale_init.size()).data(), W_scale_init.size());
+  Map<VectorXd> scale_est(pars.tail(scale_init.size()).data(), scale_init.size());
 
-  Rcout << "Optimized log(W_scale)=" << W_scale(0) << std::endl;
-  Rcout << "               W_scale=" << exp(W_scale(0)) << std::endl;
+  Rcout << "Optimized log(gamma_scale)=" << scale_est(0) << std::endl;
+  Rcout << "              gamma_scale=" << exp(scale_est(0)) << std::endl;
+  Rcout << "Optimized log(W_scale)=" << scale_est(1) << std::endl;
+  Rcout << "               W_scale=" << exp(scale_est(1)) << std::endl;
 
   out[0] = -nllopt; // Return (positive) LogLik
   out[3] = etamat;
-  out[5] = W_scale.array().exp().matrix();
-
+  out[5] = exp(scale_est(0));
+  out[6] = exp(scale_est(1));
   
   if (n_samples > 0 || calcGradHess){
     if (verbose) Rcout << "Allocating for Gradient" << std::endl;
     VectorXd grad(N*(D-1));
     MatrixXd hess; // don't preallocate this thing could be unneeded
     if (verbose) Rcout << "Calculating Gradient" << std::endl;
-    grad = cm.calcGrad(W_scale); // should have eta at optima already
+    grad = cm.calcGrad(scale_est); // should have eta at optima already
     
     // "Multinomial-Dirichlet" option
     if (multDirichletBoot>=0.0){
@@ -119,14 +123,14 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
       samples.attr("dim") = d; // convert to 3d array for return to R
       out[4] = samples;
       NumericVector t(timer);
-      out[6] = t;
+      out[7] = t;
       timer.step("Overall_stop");
       return out;
     }
     // "Multinomial-Dirchlet" option 
     if (verbose) Rcout << "Calculating Hessian" << std::endl;
     timer.step("HessianCalculation_start");
-    hess = -cm.calcHess(); // should have eta at optima already
+    hess = -cm.calcHess(etavec, scale_est); // should have eta at optima already
     timer.step("HessianCalculation_Stop");
     out[1] = grad;
     if ((N * (D-1)) > 44750){
@@ -151,7 +155,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
         Rcpp::warning("Decomposition of Hessian Failed, returning MAP Estimate only");
         return out;
       }
-      out[7] = logInvNegHessDet;
+      out[8] = logInvNegHessDet;
       
       IntegerVector d = IntegerVector::create(D-1, N, n_samples);
       NumericVector samples = wrap(samp);
@@ -161,7 +165,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   } // endif n_samples || calcGradHess
   timer.step("Overall_stop");
   NumericVector t(timer);
-  out[6] = t;
-  out[8] = B;
+  out[7] = t;
+  out[9] = B;
   return out;
 }
