@@ -35,8 +35,8 @@ NULL
 
 #' @rdname labraduck_fit
 #' @export
-labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, scale_init, M0, C0, observations,
-                    init=NULL, pars=c("Eta", "Sigma", "Thetas_filtered", "Thetas_smoothed"),
+labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, M0, C0, observations, gamma_scale=0, W_scale=0, 
+                    init=NULL, pars=c("Eta", "Sigma", "Thetas_filtered", "Thetas_smoothed", "M_star", "Eta_DLM"),
                     ...){
   args <- list(...)
   N <- try_set_dims(c(ncol(Y), args[["N"]]))
@@ -71,14 +71,23 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, scale_init, M0, C0
   if (is.null(Y)){
     # create pibblefit object and pass to sample_prior then return
     # untested (TODO)
+    if(gamma_scale > 0) {
+      gamma_init = gamma_scale
+    } else {
+      gamma_init = 1
+    }
+    if(W_scale > 0) {
+      W_scale_init = W_scale
+    } else {
+      W_scale_init = 1
+    }
     out <- labraduckfit(N=N, D=D, T=T, coord_system="alr", alr_base=D, upsilon=upsilon, Xi=Xi,
-      gamma_init=gamma_init, F=F, G=G, W=W, W_scale_init=W_scale_init, M0=M0, C0=C0, observations=observations)
+      gamma=gamma_init, F=F, G=G, W=W, W_scale=W_scale_init, M0=M0, C0=C0, observations=observations)
     out <- sample_prior(out, n_samples=n_samples, pars=pars, use_names=use_names)
     return(out)
   } else {
     if(is.null(init)) init <- random_pibble_init(Y)   # initialize init 
   }
-
 
   # for optimization and laplace approximation
   calcGradHess <- args_null("calcGradHess", args, TRUE)
@@ -100,13 +109,15 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, scale_init, M0, C0
   ncores <- args_null("ncores", args, -1)
   apply_smoother <- args_null("apply_smoother", args, TRUE)
   
-  # ## fit collapsed model ##
-  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, F, G, W, M0, C0, observations, init, scale_init, n_samples, 
+  ## fit collapsed model ##
+  fitc <- optimLabraduckCollapsed(Y, upsilon, Xi, F, G, W, M0, C0, observations, init,
+                                gamma_scale, W_scale, n_samples, 
                                 calcGradHess, b1, b2, step_size, epsilon, eps_f, 
                                 eps_g, max_iter, verbose, verbose_rate, 
                                 decomp_method, optim_method, eigvalthresh, 
                                 jitter, multDirichletBoot, 
                                 useSylv, ncores)
+
   timerc <- parse_timer_seconds(fitc$Timer)
 
   gamma_scale <- fitc$gamma_scale
@@ -139,8 +150,9 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, scale_init, M0, C0
   if(ret_mean) {
     apply_smoother <- FALSE
   }
+
   # ret_mean overrides sample returning for now
-  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, W_scale, gamma_scale, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
+  fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma_scale, W_scale, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
 
   timeru <- parse_timer_seconds(fitu$Timer)
   
@@ -165,6 +177,12 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, scale_init, M0, C0
   }
   if ("Thetas_smoothed" %in% pars & !ret_mean){
     out[["Thetas_smoothed"]] <- fitu$Thetas_smoothed_sample
+  }
+  if ("M_star" %in% pars & !ret_mean){
+    out[["M_star"]] <- fitu$M_star_sample
+  }
+  if ("Eta_DLM" %in% pars & !ret_mean){
+    out[["Eta_DLM"]] <- fitu$Eta_sample
   }
   if ("Sigma" %in% pars){
     out[["Sigma"]] <- fitu$Sigma
@@ -196,6 +214,7 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, scale_init, M0, C0
   # #out$logMarginalLikelihood <- logMarginalLikelihood
   attr(out, "class") <- c("labraduckfit", "pibblefit")
   # add names if present 
+
   if (use_names) out <- name(out)
   verify(out) # verify the labraduckfit object
   return(out)

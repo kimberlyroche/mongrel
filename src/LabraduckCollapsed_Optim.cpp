@@ -21,7 +21,8 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
                const Eigen::MatrixXd C0,
                const Eigen::VectorXd observations, 
                Eigen::MatrixXd init, 
-               Eigen::VectorXd scale_init,
+               double gamma_scale=0,
+               double W_scale=0,
                int n_samples=2000, 
                bool calcGradHess = true,
                double b1 = 0.9,         
@@ -54,14 +55,26 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   MatrixXd KInv = Xi.inverse();
   MatrixXd U = dlm_U(F, G, W, C0, observations); // this is explicitly missing (1) scale W_scale (2) gamma on the diagonal
 
-  Rcout << "Initializing log(gamme_scale)=" << scale_init(0) << std::endl;
-  Rcout << "                  gamma_scale=" << exp(scale_init(0)) << std::endl;
-  Rcout << "Initializing log(W_scale)=" << scale_init(1) << std::endl;
-  Rcout << "                  W_scale=" << exp(scale_init(1)) << std::endl;
-
-  LabraduckCollapsed cm(Y, upsilon, B, KInv, U, useSylv);
+  bool optimize_gamma_scale = true;
+  if(gamma_scale > 0)
+    optimize_gamma_scale = false;
+  bool optimize_W_scale = true;
+  if(W_scale > 0)
+    optimize_W_scale = false;
+  LabraduckCollapsed cm(Y, upsilon, B, KInv, U, optimize_gamma_scale, optimize_W_scale, useSylv);
 
   Map<VectorXd> eta(init.data(), init.size()); // will rewrite by optim
+  VectorXd scale_init(2);
+  if(gamma_scale > 0) {
+    scale_init(0) = log(gamma_scale);
+  } else {
+    scale_init(0) = log(1);
+  }
+  if(W_scale > 0) {
+    scale_init(1) = log(W_scale);
+  } else {
+    scale_init(1) = log(1);
+  }
   VectorXd pars(init.size() + scale_init.size());
   pars.head(init.size()) = eta;
   pars.tail(scale_init.size()) = scale_init;
@@ -70,7 +83,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   List out(10);
   out.names() = CharacterVector::create("LogLik", "Gradient", "Hessian",
             "Pars", "Samples", "gamma_scale", "W_scale", "Timer", "logInvNegHessDet", "B");
-  
+
   // Pick optimizer (ADAM - without perturbation appears to be best)
   //   ADAM with perturbations not fully implemented
   timer.step("Optimization_start");
@@ -90,24 +103,24 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
   eta = pars.head(init.size());
   Map<VectorXd> etavec(eta.data(), (D-1)*N);
   Map<MatrixXd> etamat(eta.data(), D-1, N);
-  Map<VectorXd> scale_est(pars.tail(scale_init.size()).data(), scale_init.size());
+  Map<VectorXd> scale_estimates(pars.tail(scale_init.size()).data(), scale_init.size());
 
-  Rcout << "Optimized log(gamma_scale)=" << scale_est(0) << std::endl;
-  Rcout << "              gamma_scale=" << exp(scale_est(0)) << std::endl;
-  Rcout << "Optimized log(W_scale)=" << scale_est(1) << std::endl;
-  Rcout << "               W_scale=" << exp(scale_est(1)) << std::endl;
+  Rcout << "Optimized log(gamma_scale)=" << scale_estimates(0) << std::endl;
+  Rcout << "              gamma_scale=" << exp(scale_estimates(0)) << std::endl;
+  Rcout << "Optimized log(W_scale)=" << scale_estimates(1) << std::endl;
+  Rcout << "               W_scale=" << exp(scale_estimates(1)) << std::endl;
 
   out[0] = -nllopt; // Return (positive) LogLik
   out[3] = etamat;
-  out[5] = exp(scale_est(0));
-  out[6] = exp(scale_est(1));
+  out[5] = exp(scale_estimates(0));
+  out[6] = exp(scale_estimates(1));
   
   if (n_samples > 0 || calcGradHess){
     if (verbose) Rcout << "Allocating for Gradient" << std::endl;
     VectorXd grad(N*(D-1));
     MatrixXd hess; // don't preallocate this thing could be unneeded
     if (verbose) Rcout << "Calculating Gradient" << std::endl;
-    grad = cm.calcGrad(scale_est); // should have eta at optima already
+    grad = cm.calcGrad(scale_estimates); // should have eta at optima already
     
     // "Multinomial-Dirichlet" option
     if (multDirichletBoot>=0.0){
@@ -130,7 +143,7 @@ List optimLabraduckCollapsed(const Eigen::ArrayXXd Y,
     // "Multinomial-Dirchlet" option 
     if (verbose) Rcout << "Calculating Hessian" << std::endl;
     timer.step("HessianCalculation_start");
-    hess = -cm.calcHess(etavec, scale_est); // should have eta at optima already
+    hess = -cm.calcHess(etavec, scale_estimates); // should have eta at optima already
     timer.step("HessianCalculation_Stop");
     out[1] = grad;
     if ((N * (D-1)) > 44750){

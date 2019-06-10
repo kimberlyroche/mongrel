@@ -12,8 +12,11 @@ class TimeSeriesFit
     MatrixXd Thetas_filtered;
     int upsilonT;
     MatrixXd XiT;
-    // smoothing results to be added
-    MatrixXd Thetas_simulation_smoothed;
+    // smoothing results
+    MatrixXd Thetas_smoothed; // samples from {F_t^T G_t^T Omega_{t-1} + Omega_t}_{1:T}
+    MatrixXd Ms_star;  // samples from {F_t^T G_t^T Omega_{t-1}}_{1:T}
+    MatrixXd etas;     // samples from {F_t^T (G_t^T Omega_{t-1} + Omega_t) + v_t^T}_{1:T}
+                       // (these are just F-transformed, Sigma-noised Thetas_smoothed0
   private:
     int N;
     int T; // T may be larger than N if there are gaps in observations
@@ -31,15 +34,13 @@ class TimeSeriesFit
     const MatrixXd M0;
     const MatrixXd C0;
     const VectorXd observations;
-    // filtering results
+    // filtering intermediate results
     MatrixXd Rs;
     MatrixXd Ms;
     MatrixXd Cs;
     // indicate which applied
     bool filtered;
-    bool smoothed;
-    bool simulation_smoothed;
-
+    bool smoothed; // simulation smoothing
     
   public:
     TimeSeriesFit(const MatrixXd F_,
@@ -57,7 +58,6 @@ class TimeSeriesFit
       // note: eta is transposed in the DLM specification!
       filtered = false;
       smoothed = false;
-      simulation_smoothed = false;
     }
     ~TimeSeriesFit(){}        
     
@@ -163,12 +163,13 @@ class TimeSeriesFit
 
     // assuming time-invariant F, G, W, and gamma
     // need to adapt for time varying parameters (TODO)
-    // smoother sometimes returns all zeros for a sample at time point T (need to debug)
     void apply_simulation_smoother() {
       if(filtered) {
-        Thetas_simulation_smoothed = MatrixXd(system_dim*(D-1), T); // single sample over the whole trajectory
-        MatrixXd smoothed_Thetas(system_dim*(D-1), T);
+        Thetas_smoothed = MatrixXd(system_dim*(D-1), T); // single sample over the whole trajectory
+        Ms_star = MatrixXd(system_dim*(D-1), T);
+        etas = MatrixXd((D-1), T);
         MatrixXd LV = rInvWishRevCholesky(upsilonT, XiT).matrix().transpose();
+        MatrixXd I_P = MatrixXd::Identity(D-1, D-1);
         // grab M_T
         MatrixXd M_t = unpack_sample(Ms, system_dim, (D-1), T-1);
         // grab C_T
@@ -179,9 +180,14 @@ class TimeSeriesFit
         MatrixXd smoothed_Theta_t = rMatNormalCholesky(M_t, LU, LV);
         for(int i=0; i<system_dim; i++) {
           for(int j=0; j<(D-1); j++) {
-            smoothed_Thetas(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j);
+            Thetas_smoothed(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j);
+            Ms_star(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j); // no update yet
           }
         }
+        MatrixXd Z(F.cols(), F.rows());
+        fillUnitNormal(Z);
+        MatrixXd eta_t = (F.transpose())*smoothed_Theta_t + Z*(LV.transpose());
+        etas.col(T-1) = eta_t;
         MatrixXd R_t(system_dim, system_dim);
         MatrixXd R_t_inv(system_dim, system_dim);
         MatrixXd Z_t(system_dim, system_dim);
@@ -203,11 +209,15 @@ class TimeSeriesFit
           smoothed_Theta_t = rMatNormalCholesky(M_t_star, LU, LV); // reuse
           for(int i=0; i<system_dim; i++) {
             for(int j=0; j<(D-1); j++) {
-              Thetas_simulation_smoothed(i+(j*system_dim),t-1) = smoothed_Theta_t(i,j);
+              Thetas_smoothed(i+(j*system_dim),t-1) = smoothed_Theta_t(i,j);
+              Ms_star(i+(j*system_dim),t-1) = M_t_star(i,j);
             }
           }
+          fillUnitNormal(Z);
+          eta_t = (F.transpose())*smoothed_Theta_t + Z*(LV.transpose())*sqrt(gamma_scale);
+          etas.col(t) = eta_t;
         }
-        simulation_smoothed = true;
+        smoothed = true;
       }
     }
 };

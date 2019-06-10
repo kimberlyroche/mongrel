@@ -18,8 +18,8 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
                     const Eigen::Map<Eigen::MatrixXd> F, 
                     const Eigen::Map<Eigen::MatrixXd> G, 
                     const Eigen::Map<Eigen::MatrixXd> W, 
-                    const double W_scale,
                     const double gamma_scale,
+                    const double W_scale,
                     const int upsilon,
                     const Eigen::Map<Eigen::MatrixXd> Xi, 
                     const Eigen::Map<Eigen::MatrixXd> M0, 
@@ -42,8 +42,8 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
   // alternatively we could use the mean of eta
   Timer timer;
   timer.step("Overall_start");
-  List out(4);
-  out.names() = CharacterVector::create("Sigma", "Timer", "Thetas_filtered_sample", "Thetas_smoothed_sample");
+  List out(6);
+  out.names() = CharacterVector::create("Sigma", "Timer", "Thetas_filtered_sample", "Thetas_smoothed_sample", "M_star_sample", "Eta_sample");
   int D = Xi.rows()+1;
   int N = observations.size();
   int T = observations.maxCoeff();
@@ -52,13 +52,15 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
   MatrixXd SigmaDraw0((D-1)*(D-1), iter);
   MatrixXd ThetaFilteredDraw0(system_dim*(D-1)*T, iter);
   MatrixXd ThetaSmoothedDraw0(system_dim*(D-1)*T, iter);
+  MatrixXd MStarDraw0(system_dim*(D-1)*T, iter);
+  MatrixXd EtaDraw0((D-1)*T, iter);
 
   //iterate over all draws of eta - embarrassingly parallel with parallel rng
   #ifdef STRAY_USE_PARALLEL
     Eigen::setNbThreads(1);
     //Rcout << "thread: "<< omp_get_max_threads() << std::endl;
   #endif 
-  #pragma omp parallel shared(D, N, SigmaDraw0, ThetaFilteredDraw0, ThetaSmoothedDraw0)
+  #pragma omp parallel shared(D, N, SigmaDraw0, ThetaFilteredDraw0, ThetaSmoothedDraw0, MStarDraw0, EtaDraw0)
   {
   #ifdef STRAY_USE_PARALLEL
     boost::random::mt19937 rng(omp_get_thread_num()+seed);
@@ -93,7 +95,13 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
         ts.apply_simulation_smoother();
         Eigen::Ref<VectorXd> ThetaSmoothedDraw_tmp = ThetaSmoothedDraw0.col(i); // this is 2 x D-1 x T
         Eigen::Map<MatrixXd> ThetaSDraw_tosquare(ThetaSmoothedDraw_tmp.data(), system_dim*(D-1), T);
-        ThetaSDraw_tosquare.noalias() = ts.Thetas_simulation_smoothed;
+        ThetaSDraw_tosquare.noalias() = ts.Thetas_smoothed;
+        Eigen::Ref<VectorXd> MStarDraw_tmp = MStarDraw0.col(i); // also 2 x D-1 x T
+        Eigen::Map<MatrixXd> MStarDraw_tosquare(MStarDraw_tmp.data(), system_dim*(D-1), T);
+        MStarDraw_tosquare.noalias() = ts.Ms_star;
+        Eigen::Ref<VectorXd> EtaDraw_tmp = EtaDraw0.col(i); // also 1 x D-1 x T
+        Eigen::Map<MatrixXd> EtaDraw_tosquare(EtaDraw_tmp.data(), (D-1), T);
+        EtaDraw_tosquare.noalias() = ts.etas;
       }
     }
   }
@@ -115,6 +123,8 @@ List uncollapseLabraduck(const Eigen::Map<Eigen::MatrixXd> eta, // note this is 
   out[1] = timer;
   out[2] = ThetaFilteredDraw0;
   out[3] = ThetaSmoothedDraw0;
+  out[4] = MStarDraw0;
+  out[5] = EtaDraw0;
   return out;
 }
 

@@ -18,13 +18,13 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     const MatrixXd B;
     const MatrixXd KInv;
     const MatrixXd U;
-    double gamma;
     MatrixXd A;
     MatrixXd AInv; // AInv = (gamma*I + W_scale*U)^{-1}
     // computed quantities 
     int D;
     int N;
-    int P;
+    bool optimize_gamma_scale;
+    bool optimize_W_scale;
     double delta;
     double phi;
     Eigen::ArrayXd m;
@@ -51,21 +51,24 @@ class LabraduckCollapsed : public Numer::MFuncGrad
                         const MatrixXd B_,
                         const MatrixXd KInv_,
                         const MatrixXd U_,
+                        bool optimize_gamma_scale_,
+                        bool optimize_W_scale_,
                         bool sylv=false) :
-    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), U(U_)
+    Y(Y_), upsilon(upsilon_), B(B_), KInv(KInv_), U(U_), optimize_gamma_scale(optimize_gamma_scale_), optimize_W_scale(optimize_W_scale_)
     {
       D = Y.rows();           // number of multinomial categories
       N = Y.cols();           // number of samples
-      P = 2;                  // number of scale parameters
       n = Y.colwise().sum();  // total number of counts per sample
       delta = 0.5*(upsilon + N + D - 2.0);
       phi = 0.5*(D-1);
+      // the assumption here will be that zero values for gamma_scale or W_scale indicate we should optimize them
       this->sylv = sylv;
     }
     ~LabraduckCollapsed(){}        
     
     // Update with Eta when it comes in as a vector
     void updateWithEtaLL(const Ref<const VectorXd>& etavec, const Ref<const VectorXd>& scale_pars){
+      // contents of scale_pars should be (0) gamma (1) W
       const Map<const MatrixXd> eta(etavec.data(), D-1, N);
       E = eta - B;
 
@@ -149,32 +152,60 @@ class LabraduckCollapsed : public Numer::MFuncGrad
         g.noalias() += -delta*(R + R.transpose())*C.transpose();        
       }
       Map<VectorXd> grad_eta(g.data(), g.size());
-      MatrixXd M;
-      VectorXd grad(grad_eta.size() + P);
+      VectorXd grad(grad_eta.size() + 2);
       VectorXd g2(1);
       VectorXd g3(1);
+      MatrixXd M;
+      double e_gamma = exp(scale_pars(0));
+      double e_W = exp(scale_pars(1));
       if (sylv & (N < (D-1))){
-        M = AInv*(E.transpose())*C*R;
-        // gradient for gamma scale
-        // Frobenius inner product may work if I can convince myself this whole product is symmetric (TODO)
-        g2(0) = delta*M.diagonal().sum();
-        g2(0) -= phi*AInv.diagonal().sum();
-        g2(0) = exp(scale_pars(0))*g2(0);
-        // gradient for W scale
-        g3(0) = delta*(M*U).diagonal().sum();
-        g3(0) -= phi*(AInv*U).diagonal().sum();
-        g3(0) = exp(scale_pars(1))*g3(0);
+        if(optimize_gamma_scale || optimize_W_scale) {
+          M = AInv*(E.transpose())*C*R;
+          if(optimize_gamma_scale) {
+            // gradient for gamma scale
+            // Frobenius inner product may work if I can convince myself this whole product is symmetric (TODO)
+            g2(0) = delta*M.diagonal().sum();
+            g2(0) -= phi*AInv.diagonal().sum();
+            g2(0) = e_gamma*g2(0);
+          } else {
+            g2(0) = 0;
+          }
+          if(optimize_W_scale) {
+            // gradient for W scale
+            g3(0) = delta*(M*U).diagonal().sum();
+            g3(0) -= phi*(AInv*U).diagonal().sum();
+            g3(0) = e_W*g3(0);
+          } else {
+            g3(0) = 0;
+          }
+        } else {
+          g2(0) = 0;
+          g3(0) = 0;
+        }
       } else {
-        M = C*R*E*AInv;
-        // gradient for gamma scale
-        // Frobenius inner product may work if I can convince myself this whole product is symmetric (TODO)
-        g2(0) = delta*M.diagonal().sum();
-        g2(0) -= phi*AInv.diagonal().sum();
-        g2(0) = exp(scale_pars(0))*g2(0);
-        // gradient for W scale
-        g3(0) = delta*(M*U).diagonal().sum();
-        g3(0) -= phi*(AInv*U).diagonal().sum();
-        g3(0) = exp(scale_pars(1))*g3(0);
+        if(optimize_gamma_scale || optimize_W_scale) {
+          M = C*R*E*AInv;
+          if(optimize_gamma_scale) {
+            // gradient for gamma scale
+            // Frobenius inner product
+            g2(0) = delta*M.diagonal().sum();
+            g2(0) -= phi*AInv.diagonal().sum();
+            g2(0) = e_gamma*g2(0);
+          } else {
+            g2(0) = 0;
+          }
+          if(optimize_W_scale) {
+            // gradient for W scale
+            g3(0) = delta*(M*U).diagonal().sum();
+            g3(0) -= phi*(AInv*U).diagonal().sum();
+            g3(0) = e_W*g3(0);
+          } else {
+            g3(0);
+          }
+        } else {
+          g2(0) = 0;
+          g3(0) = 0;
+        }
       }
       grad << grad_eta, g2, g3;
       return grad; // not transposing (leaving as vector)
@@ -236,11 +267,11 @@ class LabraduckCollapsed : public Numer::MFuncGrad
     // function for use by ADAMOptimizer wrapper (and for RcppNumeric L-BFGS)
     virtual double f_grad(Numer::Constvec& pars, Numer::Refvec grad){
       const Map<const VectorXd> eta(pars.head(N*(D-1)).data(), N*D-1);
-      const Map<const VectorXd> scale_pars(pars.tail(P).data(), P); // may want to scale blocks of W separately in future
-      updateWithEtaLL(eta, scale_pars);    // precompute things needed for LogLik
-      updateWithEtaGH();       // precompute things needed for gradient and hessian
+      const Map<const VectorXd> scale_pars(pars.tail(2).data(), 2); // may want to scale blocks of W separately in future
+      updateWithEtaLL(eta, scale_pars);  // precompute things needed for LogLik
+      updateWithEtaGH();                 // precompute things needed for gradient and hessian
       grad = -calcGrad(scale_pars);      // negative because wraper minimizes
-      return -calcLogLik(eta); // negative because wraper minimizes
+      return -calcLogLik(eta);           // negative because wraper minimizes
     }
 };
 
