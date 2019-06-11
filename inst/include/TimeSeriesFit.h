@@ -178,12 +178,19 @@ class TimeSeriesFit
         MatrixXd LU = lltOfCt.matrixL();
         // sample Theta_T
         MatrixXd smoothed_Theta_t = rMatNormalCholesky(M_t, LU, LV);
-        for(int i=0; i<system_dim; i++) {
-          for(int j=0; j<(D-1); j++) {
-            Thetas_smoothed(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j);
-            Ms_star(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j); // no update yet
-          }
-        }
+        // TODO: convert to map (TEST)
+        Eigen::Ref<VectorXd> ThetaSmoothedDraw_tmp = Thetas_smoothed.col(T-1); // set of references to destination
+        Eigen::Map<MatrixXd> ThetaSDraw_tosquare(ThetaSmoothedDraw_tmp.data(), system_dim, (D-1)); // map those references to some object
+        ThetaSDraw_tosquare.noalias() = smoothed_Theta_t; // copy content into that object
+        Eigen::Ref<VectorXd> ThetaMeanDraw_tmp = Ms_star.col(T-1); // set of references to destination
+        Eigen::Map<MatrixXd> ThetaMeanDraw_tosquare(ThetaMeanDraw_tmp.data(), system_dim, (D-1)); // map those references to some object
+        ThetaMeanDraw_tosquare.noalias() = smoothed_Theta_t; // copy content into that object
+        // for(int i=0; i<system_dim; i++) {
+        //   for(int j=0; j<(D-1); j++) {
+        //     Thetas_smoothed(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j);
+        //     Ms_star(i+(j*system_dim),T-1) = smoothed_Theta_t(i,j); // no update yet
+        //   }
+        // }
         MatrixXd Z(F.cols(), F.rows());
         fillUnitNormal(Z);
         MatrixXd eta_t = (F.transpose())*smoothed_Theta_t + Z*(LV.transpose());
@@ -207,15 +214,22 @@ class TimeSeriesFit
           lltOfCt = Eigen::LLT<MatrixXd>(C_t_star); // reuse
           LU = lltOfCt.matrixL();
           smoothed_Theta_t = rMatNormalCholesky(M_t_star, LU, LV); // reuse
-          for(int i=0; i<system_dim; i++) {
-            for(int j=0; j<(D-1); j++) {
-              Thetas_smoothed(i+(j*system_dim),t-1) = smoothed_Theta_t(i,j);
-              Ms_star(i+(j*system_dim),t-1) = M_t_star(i,j);
-            }
-          }
+          // TODO: convert to map
+          Eigen::Ref<VectorXd> ThetaSmoothedDraw_tmp = Thetas_smoothed.col(t); // set of references to destination
+          Eigen::Map<MatrixXd> ThetaSDraw_tosquare(ThetaSmoothedDraw_tmp.data(), system_dim, (D-1)); // map those references to some object
+          ThetaSDraw_tosquare.noalias() = smoothed_Theta_t; // copy content into that object
+          Eigen::Ref<VectorXd> ThetaMeanDraw_tmp = Ms_star.col(t); // set of references to destination
+          Eigen::Map<MatrixXd> ThetaMeanDraw_tosquare(ThetaMeanDraw_tmp.data(), system_dim, (D-1)); // map those references to some object
+          ThetaMeanDraw_tosquare.noalias() = smoothed_Theta_t; // copy content into that object
+          // for(int i=0; i<system_dim; i++) {
+          //   for(int j=0; j<(D-1); j++) {
+          //     Thetas_smoothed(i+(j*system_dim),t-1) = smoothed_Theta_t(i,j);
+          //     Ms_star(i+(j*system_dim),t-1) = M_t_star(i,j);
+          //   }
+          // }
           fillUnitNormal(Z);
           eta_t = (F.transpose())*smoothed_Theta_t + Z*(LV.transpose())*sqrt(gamma_scale);
-          etas.col(t) = eta_t;
+          etas.col(t-1) = eta_t;
         }
         smoothed = true;
       }

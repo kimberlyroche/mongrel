@@ -24,14 +24,22 @@ riemann_dist <- function(A, B) {
 }
 
 plot_Sigma <- function(fit, Y, baboon, save_path="", append="", as_corr=FALSE) {
-  png(paste0(save_path,"/",baboon,"_Sigma",append,".png"))
+  if(as_corr) {
+    png(paste0(save_path,"/",baboon,"_Sigma_corr",append,".png"))
+  } else {
+    png(paste0(save_path,"/",baboon,"_Sigma",append,".png"))
+  }
   if(as_corr) {
     image(cov2cor(fit$Sigma[,,1]))
   } else {
     image(fit$Sigma[,,1])
   }
   dev.off()
-  png(paste0(save_path,"/",baboon,"_empcov",append,".png"))
+  if(as_corr) {
+    png(paste0(save_path,"/",baboon,"_empcov_corr",append,".png"))
+  } else {
+    png(paste0(save_path,"/",baboon,"_empcov",append,".png"))
+  }
   if(as_corr) {
     image(cov2cor(cov(driver::alr(t(Y + 0.5)))))
   } else {
@@ -213,7 +221,7 @@ plot_element_distros <- function(fit_models, W_scales, percent_sample=0.1, save_
 # assumes both smoother and filter have been run!
 plot_posterior <- function(Y, fit, F, observations, baboon, save_path="", 
                            plot_what=c("filtered", "smoothed_mean", "smoothed", "dlm_eta", "optimized_eta"),
-                           append_str="", lr_idx=1) {
+                           append_str="", lr_idx=1, ylim=NULL) {
   # plot the first sample of (1) log-transformed Y (2) approximated eta (3) filtered Theta (with F applied)
   # these should be similar
   T <- max(observations)
@@ -311,15 +319,15 @@ plot_posterior <- function(Y, fit, F, observations, baboon, save_path="",
   }
   if("smoothed_mean" %in% plot_what) {
     df2 <- data.frame(timepoint=1:T, ymin_ms=smoothed_ymin_MStar[1:T], ymax_ms=smoothed_ymax_MStar[1:T])
-    df <- merge(df, df2, all=TRUE)
+    df <- merge(df, df2, by='timepoint', all=TRUE)
   }
   if("smoothed" %in% plot_what) {
     df2 <- data.frame(timepoint=1:T, ymin_s=smoothed_ymin_Theta[1:T], ymax_s=smoothed_ymax_Theta[1:T])
-    df <- merge(df, df2, all=TRUE)
+    df <- merge(df, df2, by='timepoint', all=TRUE)
   }
   if("dlm_eta" %in% plot_what) {
     df2 <- data.frame(timepoint=1:T, ymin_etadlm=smoothed_ymin_eta[1:T], ymax_etadlm=smoothed_ymax_eta[1:T])
-    df <- merge(df, df2, all=TRUE)
+    df <- merge(df, df2, by='timepoint', all=TRUE)
   }
   if("optimized_eta" %in% plot_what) {
     df2 <- data.frame(timepoint=as(observations, "vector"), ymin_etaopt=etaopt_ymin, ymax_etaopt=etaopt_ymax)
@@ -347,7 +355,7 @@ plot_posterior <- function(Y, fit, F, observations, baboon, save_path="",
   if("optimized_eta" %in% plot_what) {
     p <- p + geom_point(aes(x=timepoint, y=ymin_etaopt), color="red", size=1) + geom_point(aes(x=timepoint, y=ymax_etaopt), color="red", size=1)
   }
-  p <- p + geom_point(aes(x=timepoint, y=alrY), color="blue", size=2) + theme_minimal()
+  p <- p + geom_point(aes(x=timepoint, y=alrY), color="blue", size=1) + theme_minimal()
   if(lr_idx == 1) {
     p <- p + ylab("ALR(Bifidobacteriaceae/Helicobacteraceae)")
   } else if(lr_idx == 2) {
@@ -358,11 +366,13 @@ plot_posterior <- function(Y, fit, F, observations, baboon, save_path="",
     # index 25
     p <- p + ylab("ALR(Lactobacillaceae/Helicobacteraceae)")
   }
-  show(p)
-  #p <- p + ylim(-10,10.5)
+  #show(p)
+  if(!is.null(ylim)) {
+    p <- p + ylim(ylim[1], ylim[2])
+  }
   width <- round(log(T/100)*3)
-#  ggsave(filename=paste0(save_path,"/",baboon,"_Theta_smoothed",append_str,"_LR",lr_idx,".png"),
-#         units="in", scale=2, width=width, height=2)
+  ggsave(filename=paste0(save_path,"/",baboon,"_Theta_smoothed",append_str,"_LR",lr_idx,".png"),
+         units="in", scale=2, width=width, height=2)
 }
 
 record_time <- function(fit, baboon, save_path="", append_str="") {
@@ -384,6 +394,7 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0,
   if(subset_time) {
     date_lower_limit <- "2001-10-01"
     date_upper_limit <- "2002-11-30"
+    date_upper_limit <- "2003-11-30"
 
     min_idx <- min(which(names(observations_full) >= date_lower_limit))
     max_idx <- max(which(names(observations_full) <= date_upper_limit))
@@ -419,16 +430,16 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0,
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                    gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations,
                    gamma_scale=gamma_scale, W_scale=W_scale,
-                   max_iter=100000, b1=0.95, step_size=0.002, eps_f=1e-11, decomp_method="eigen",
+                   max_iter=100000, b1=0.95, step_size=0.003, eps_f=1e-11, decomp_method="eigen",
                    n_samples=n_samples, ret_mean=ret_mean,
                    apply_smoother=apply_smoother, useSylv=useSylv, verbose=FALSE)
   return(list(fit=fit, Y=Y, observations=observations))
 }
 
 best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
-best_sampled <- c("VAI")
+best_sampled <- c("ACA")
 
-subset_time <- TRUE
+subset_time <- FALSE
 eval_MAP <- FALSE
 
 save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
@@ -455,23 +466,24 @@ for(baboon in best_sampled) {
     observations <- fit_obj$observations
   
     # high abundance
-    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed_mean", "smoothed", "dlm_eta", "optimized_eta"),
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=1)
-    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed_mean", "smoothed", "dlm_eta", "optimized_eta"),
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=2)
     # low abundance
-    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed_mean", "smoothed", "dlm_eta", "optimized_eta"),
-                   save_path=save_path, lr_idx=20)
-    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed_mean", "smoothed", "dlm_eta", "optimized_eta"),
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                   save_path=save_path, lr_idx=21)
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=25)
-    
+
     if(eval_MAP) {
-      fit_obj <- fit_model(indiv_data, W, F, gamma_scale=gamma_scale_init, W_scale=W_scale_init,
+      fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
                            n_samples=0, ret_mean=TRUE,
                            apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
       fit <- fit_obj$fit
       Y <- fit_obj$Y
       plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=FALSE)
+      plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=TRUE)
     }
   }
 }

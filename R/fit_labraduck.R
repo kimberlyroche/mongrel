@@ -151,6 +151,8 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, M0, C0, observatio
     apply_smoother <- FALSE
   }
 
+  cat("Loglik:",fitc$LogLik,"\n")
+
   # ret_mean overrides sample returning for now
   fitu <- uncollapseLabraduck(fitc$Samples, F, G, W, gamma_scale, W_scale, upsilon, Xi, M0, C0, observations, seed=seed, ret_mean=ret_mean, apply_smoother=apply_smoother, ncores=ncores)
 
@@ -162,10 +164,9 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, M0, C0, observatio
              "Overall" = unname(timerc["Overall"]) +  unname(timeru["Overall"]), 
              "Uncollapse_Overall" = timeru["Overall"])
   
-  
-  # # Marginal Likelihood Computation
-  # # d <- D^2 + N*D + D*Q
-  # # logMarginalLikelihood <- fitc$LogLik+d/2*log(2*pi)+.5*fitc$logInvNegHessDet-d/2*log(N)
+  # Marginal Likelihood Computation -- check this (TODO)
+  # d <- D^2 + N*D + D*Q
+  # logMarginalLikelihood <- fitc$LogLik+d/2*log(2*pi)+.5*fitc$logInvNegHessDet-d/2*log(N)
     
   ## pretty output ##
   out <- list()
@@ -208,10 +209,10 @@ labraduck <- function(Y=NULL, upsilon=NULL, Xi=NULL, F, G, W, M0, C0, observatio
   out$C0 <- C0
   out$observations <- observations
   out$init <- init
-  # # for other methods
+  # for other methods
   out$summary <- NULL
   out$Timer <- timer
-  # #out$logMarginalLikelihood <- logMarginalLikelihood
+  # out$logMarginalLikelihood <- logMarginalLikelihood
   attr(out, "class") <- c("labraduckfit", "pibblefit")
   # add names if present 
 
