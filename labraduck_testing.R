@@ -383,7 +383,7 @@ record_time <- function(fit, baboon, save_path="", append_str="") {
   sink()
 }
 
-fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0,
+fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
                       n_samples=2000, ret_mean=FALSE,
                       apply_smoother=FALSE, subset_time=TRUE, useSylv=FALSE) {
   Y_full <- indiv_data$ys
@@ -425,8 +425,7 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0,
   # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
   M0 <- matrix(1, 3, D-1)
   M0[3,] <- alr_means
-  upsilon <- D+10
-  Xi <- diag(D-1)
+
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                    gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations,
                    gamma_scale=gamma_scale, W_scale=W_scale,
@@ -439,15 +438,20 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0,
 best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
 best_sampled <- c("ACA")
 
-subset_time <- FALSE
-eval_MAP <- FALSE
+subset_time <- TRUE
+eval_MAP <- TRUE
 
-save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
+#save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
+save_path <- "/Users/ladlab/Desktop/temp"
+
+#data_path <- "C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data"
+data_path <- "/Users/ladlab/Desktop/indiv_baboons"
 
 for(baboon in best_sampled) {
   cat("Fitting",baboon,"over all taxa...\n")
-  load(paste0("C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data/",baboon,"_data.RData"))
+  load(paste0(data_path,"/",baboon,"_data.RData"))
   
+  D <- ncol(indiv_data$ys)
   W <- matrix(0, 3, 3)
   F <- matrix(c(1, 0, 1), 3, 1)
   
@@ -455,8 +459,18 @@ for(baboon in best_sampled) {
   fixed_W_scale <- 0
   
   diag(W) <- c(1, 1, 1/100)
-
+  
+  # ALR prior covariance
+  upsilon <- D-1+10 # lesser certainty
+  upsilon <- D-1+20 # greater certainty; this should tighten the distribution around this mean
+  GG <- cbind(diag(D-1), -1) # log contrast for ALR with last taxon as reference;
+  # take diag as covariance over log abundances
+  Xi <- GG%*%(diag(D)*1)%*%t(GG)
+  # mean-center
+  Xi <- Xi*(upsilon-D-1)
+  
   fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
+                       upsilon, Xi,
                        n_samples=1000, ret_mean=FALSE,
                        apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
 
@@ -468,22 +482,24 @@ for(baboon in best_sampled) {
     # high abundance
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=1)
+    if(FALSE) {
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                   save_path=save_path, lr_idx=2)
+                     save_path=save_path, lr_idx=2)
     # low abundance
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=21)
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=25)
-
+    }
     if(eval_MAP) {
       fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
+                           upsilon, Xi,
                            n_samples=0, ret_mean=TRUE,
                            apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
       fit <- fit_obj$fit
       Y <- fit_obj$Y
       plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=FALSE)
-      plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=TRUE)
+      #plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=TRUE)
     }
   }
 }
