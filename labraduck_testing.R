@@ -26,26 +26,46 @@ riemann_dist <- function(A, B) {
 plot_Sigma <- function(fit, Y, baboon, save_path="", append="", as_corr=FALSE) {
   if(as_corr) {
     png(paste0(save_path,"/",baboon,"_Sigma_corr",append,".png"))
-  } else {
-    png(paste0(save_path,"/",baboon,"_Sigma",append,".png"))
-  }
-  if(as_corr) {
     image(cov2cor(fit$Sigma[,,1]))
   } else {
+    png(paste0(save_path,"/",baboon,"_Sigma",append,".png"))
     image(fit$Sigma[,,1])
   }
   dev.off()
   if(as_corr) {
     png(paste0(save_path,"/",baboon,"_empcov_corr",append,".png"))
-  } else {
-    png(paste0(save_path,"/",baboon,"_empcov",append,".png"))
-  }
-  if(as_corr) {
     image(cov2cor(cov(driver::alr(t(Y + 0.5)))))
   } else {
+    png(paste0(save_path,"/",baboon,"_empcov",append,".png"))
     image(cov(driver::alr(t(Y + 0.5))))
   }
   dev.off()
+}
+
+plot_cov_Theta <- function(D, T, n_samples, F, Thetas, baboon="", save_path="", as_corr=FALSE) {
+  # dimensions of the smoothed sample Thetas are (Q x D-1 x T) x n_samples
+  # n_samples as passed can be a subset of the samples
+  Thetas <- Thetas[,1:n_samples]
+  flattened_Theta <- matrix(NA, T*n_samples, D-1)
+  for(i in 1:n_samples) {
+    cat(i,"\n")
+    temp <- Thetas[,i]
+    dim(temp) <- c(nrow(F), D-1, T)
+    for(t in 1:T) {
+      temp2 <- temp[,,t] # 3 x D-1 (etc.)
+      flattened_Theta[T*(i-1) + t,] <- t(F)%*%temp2
+    }
+  }
+  cov_obj <- t(flattened_Theta)%*%flattened_Theta/(T*n_samples)
+  if(as_corr) {
+    png(paste0(save_path,"/",baboon,"_covTheta_corr.png"))
+    image(cov2cor(cov_obj))
+  } else {
+    png(paste0(save_path,"/",baboon,"_covTheta.png"))
+    image(cov_obj)
+  }
+  dev.off()
+  return(cov_obj)
 }
 
 get_Sigma_distances <- function(fit, method="fro", percent_sample=0.1, as_corr=FALSE) {
@@ -360,6 +380,8 @@ plot_posterior <- function(Y, fit, F, observations, baboon, save_path="",
     p <- p + ylab("ALR(Bifidobacteriaceae/Helicobacteraceae)")
   } else if(lr_idx == 2) {
     p <- p + ylab("ALR(Prevotellaceae/Helicobacteraceae)")
+  } else if(lr_idx == 7) {
+    p <- p + ylab("ALR(Muribaculaceae/Helicobacteraceae)")
   } else if(lr_idx == 21) {
     p <- p + ylab("ALR(Christensenellaceae/Helicobacteraceae)")
   } else {
@@ -479,6 +501,12 @@ for(baboon in best_sampled) {
     Y <- fit_obj$Y
     observations <- fit_obj$observations
   
+    # plot covariance associated with simulation smoother samples
+    cov_Theta <- plot_cov_Theta(fit$D, fit$T, n_samples, F, fit$Thetas_smoothed, baboon, save_path=save_path, as_corr=FALSE)
+    png(paste0(save_path,"/",baboon,"_covTheta_corr.png"))
+    image(cov2cor(cov_Theta))
+    dev.off()
+
     # high abundance
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=1)
