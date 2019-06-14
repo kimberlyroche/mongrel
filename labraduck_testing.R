@@ -48,7 +48,7 @@ plot_cov_Theta <- function(D, T, n_samples, F, Thetas, baboon="", save_path="", 
   Thetas <- Thetas[,1:n_samples]
   flattened_Theta <- matrix(NA, T*n_samples, D-1)
   for(i in 1:n_samples) {
-    cat(i,"\n")
+    #cat(i,"\n")
     temp <- Thetas[,i]
     dim(temp) <- c(nrow(F), D-1, T)
     for(t in 1:T) {
@@ -442,11 +442,12 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
   }
   omega <- 2*pi/365
   G <- matrix(c(cos(omega), -sin(omega), 0, sin(omega), cos(omega), 0, 0, 0, 1), 3, 3)
-  C0 <- W*10
+  C0 <- W
+  C0[3,3] <- C0[3,3]*10
 
   # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
   M0 <- matrix(1, 3, D-1)
-  M0[3,] <- alr_means
+  #M0[3,] <- alr_means
 
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                    gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations,
@@ -462,6 +463,8 @@ best_sampled <- c("ACA")
 
 subset_time <- TRUE
 eval_MAP <- TRUE
+
+n_samples <- 1000
 
 #save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
 save_path <- "/Users/ladlab/Desktop/temp"
@@ -484,16 +487,16 @@ for(baboon in best_sampled) {
   
   # ALR prior covariance
   upsilon <- D-1+10 # lesser certainty
-  upsilon <- D-1+20 # greater certainty; this should tighten the distribution around this mean
+  # supsilon <- D-1+20 # greater certainty; this should tighten the distribution around this mean
   GG <- cbind(diag(D-1), -1) # log contrast for ALR with last taxon as reference;
   # take diag as covariance over log abundances
   Xi <- GG%*%(diag(D)*1)%*%t(GG)
   # mean-center
   Xi <- Xi*(upsilon-D-1)
-  
+
   fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
                        upsilon, Xi,
-                       n_samples=1000, ret_mean=FALSE,
+                       n_samples=n_samples, ret_mean=FALSE,
                        apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
 
   if(!is.null(fit_obj)) {
@@ -510,7 +513,6 @@ for(baboon in best_sampled) {
     # high abundance
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=1)
-    if(FALSE) {
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                      save_path=save_path, lr_idx=2)
     # low abundance
@@ -518,7 +520,7 @@ for(baboon in best_sampled) {
                    save_path=save_path, lr_idx=21)
     plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                    save_path=save_path, lr_idx=25)
-    }
+
     if(eval_MAP) {
       fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
                            upsilon, Xi,
