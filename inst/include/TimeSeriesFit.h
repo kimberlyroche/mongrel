@@ -215,10 +215,10 @@ class TimeSeriesFit
           LU = lltOfCt.matrixL();
           smoothed_Theta_t = rMatNormalCholesky(M_t_star, LU, LV); // reuse
           // TODO: convert to map
-          Eigen::Ref<VectorXd> ThetaSmoothedDraw_tmp = Thetas_smoothed.col(t); // set of references to destination
+          Eigen::Ref<VectorXd> ThetaSmoothedDraw_tmp = Thetas_smoothed.col(t-1); // set of references to destination
           Eigen::Map<MatrixXd> ThetaSDraw_tosquare(ThetaSmoothedDraw_tmp.data(), system_dim, (D-1)); // map those references to some object
           ThetaSDraw_tosquare.noalias() = smoothed_Theta_t; // copy content into that object
-          Eigen::Ref<VectorXd> ThetaMeanDraw_tmp = Ms_star.col(t); // set of references to destination
+          Eigen::Ref<VectorXd> ThetaMeanDraw_tmp = Ms_star.col(t-1); // set of references to destination
           Eigen::Map<MatrixXd> ThetaMeanDraw_tosquare(ThetaMeanDraw_tmp.data(), system_dim, (D-1)); // map those references to some object
           ThetaMeanDraw_tosquare.noalias() = smoothed_Theta_t; // copy content into that object
           // for(int i=0; i<system_dim; i++) {
