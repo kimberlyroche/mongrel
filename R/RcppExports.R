@@ -419,6 +419,11 @@ dlm_U <- function(F, G, W, C0, observations) {
     .Call('_stray_dlm_U', PACKAGE = 'stray', F, G, W, C0, observations)
 }
 
+#' Calculate distances between positive-definite covariance matrices
+mat_dist <- function(A, B, use_Riemann) {
+    .Call('_stray_mat_dist', PACKAGE = 'stray', A, B, use_Riemann)
+}
+
 eigen_lap_test <- function(n_samples, m, S, eigvalthresh) {
     .Call('_stray_eigen_lap_test', PACKAGE = 'stray', n_samples, m, S, eigvalthresh)
 }

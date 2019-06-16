@@ -5,9 +5,10 @@
 \alias{labraduck}
 \title{Interface to fit DLM models}
 \usage{
-labraduck(Y = NULL, upsilon = NULL, Xi = NULL, gamma, F, G, W, M0,
-  C0, observations, init = NULL, pars = c("Eta", "Sigma",
-  "Thetas_filtered"), ...)
+labraduck(Y = NULL, upsilon = NULL, Xi = NULL, F, G, W, M0, C0,
+  observations, gamma_scale = 0, W_scale = 0, init = NULL,
+  pars = c("Eta", "Sigma", "Thetas_filtered", "Thetas_smoothed",
+  "M_star", "Eta_DLM"), ...)
 }
 \arguments{
 \item{Y}{D x N matrix of counts (if NULL uses priors only)}
@@ -18,8 +19,6 @@ labraduck(Y = NULL, upsilon = NULL, Xi = NULL, gamma, F, G, W, M0,
 \item{Xi}{(D-1)x(D-1) prior covariance matrix
 (default: ALR transform of diag(1)*(upsilon-D)/2 - this is
 essentially iid on "base scale" using Aitchison terminology)}
-
-\item{gamma}{Scale associated with observation-level variance (see model)}
 
 \item{F}{Observation-level transformation matrix (see model)}
 
@@ -39,6 +38,8 @@ essentially iid on "base scale" using Aitchison terminology)}
 \item{pars}{character vector of posterior parameters to return}
 
 \item{...}{}
+
+\item{scale_init}{Scale initialization system (W) and observation level (gamma) noise}
 
 \item{m}{object of class labraduckfit}
 }

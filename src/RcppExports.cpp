@@ -385,6 +385,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// mat_dist
+double mat_dist(Eigen::MatrixXd A, Eigen::MatrixXd B, bool use_Riemann);
+RcppExport SEXP _stray_mat_dist(SEXP ASEXP, SEXP BSEXP, SEXP use_RiemannSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type B(BSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_Riemann(use_RiemannSEXP);
+    rcpp_result_gen = Rcpp::wrap(mat_dist(A, B, use_Riemann));
+    return rcpp_result_gen;
+END_RCPP
+}
 // eigen_lap_test
 Eigen::MatrixXd eigen_lap_test(int n_samples, Eigen::VectorXd m, Eigen::MatrixXd S, double eigvalthresh);
 RcppExport SEXP _stray_eigen_lap_test(SEXP n_samplesSEXP, SEXP mSEXP, SEXP SSEXP, SEXP eigvalthreshSEXP) {
@@ -509,6 +522,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stray_power_G", (DL_FUNC) &_stray_power_G, 3},
     {"_stray_dlm_B", (DL_FUNC) &_stray_dlm_B, 4},
     {"_stray_dlm_U", (DL_FUNC) &_stray_dlm_U, 5},
+    {"_stray_mat_dist", (DL_FUNC) &_stray_mat_dist, 3},
     {"_stray_eigen_lap_test", (DL_FUNC) &_stray_eigen_lap_test, 4},
     {"_stray_cholesky_lap_test", (DL_FUNC) &_stray_cholesky_lap_test, 4},
     {"_stray_LaplaceApproximation_test", (DL_FUNC) &_stray_LaplaceApproximation_test, 5},

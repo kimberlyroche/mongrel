@@ -7,8 +7,8 @@
 labraduckfit(D, N, T, coord_system, iter = NULL, alr_base = NULL,
   ilr_base = NULL, Eta = NULL, Sigma = NULL, Sigma_default = NULL,
   Y = NULL, upsilon = NULL, Xi = NULL, Xi_default = NULL,
-  gamma = NULL, F = NULL, G = NULL, W = NULL, M0 = NULL,
-  C0 = NULL, observations = NULL, init = NULL)
+  gamma = NULL, F = NULL, G = NULL, W = NULL, W_scale = NULL,
+  M0 = NULL, C0 = NULL, observations = NULL, init = NULL)
 }
 \description{
 Create labraduckfit object
