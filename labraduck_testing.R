@@ -29,7 +29,7 @@ plot_cov_Theta <- function(D, T, n_samples, F, Thetas, baboon="", save_path="", 
   Thetas <- Thetas[,1:n_samples]
   flattened_Theta <- matrix(NA, T*n_samples, D-1)
   for(i in 1:n_samples) {
-    cat(i,"\n")
+    #cat(i,"\n")
     temp <- Thetas[,i]
     dim(temp) <- c(nrow(F), D-1, T)
     for(t in 1:T) {
@@ -386,7 +386,7 @@ record_time <- function(fit, baboon, save_path="", append_str="") {
   sink()
 }
 
-fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0,
+fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
                       n_samples=2000, ret_mean=FALSE,
                       apply_smoother=FALSE, subset_time=TRUE, useSylv=FALSE) {
   Y_full <- indiv_data$ys
@@ -423,13 +423,13 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0,
   }
   omega <- 2*pi/365
   G <- matrix(c(cos(omega), -sin(omega), 0, sin(omega), cos(omega), 0, 0, 0, 1), 3, 3)
-  C0 <- W*10
+  C0 <- W
+  C0[3,3] <- C0[3,3]*10
 
   # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
   M0 <- matrix(1, 3, D-1)
-  M0[3,] <- alr_means
-  upsilon <- D+10
-  Xi <- diag(D-1)
+  #M0[3,] <- alr_means
+
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                    gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations,
                    gamma_scale=gamma_scale, W_scale=W_scale,
@@ -445,13 +445,19 @@ best_sampled <- c("ACA")
 subset_time <- TRUE
 eval_MAP <- FALSE
 
-obj_path <- "C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data"
-save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
+n_samples <- 1000
+
+#save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
+save_path <- "/Users/ladlab/Desktop/temp"
+
+#data_path <- "C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data"
+data_path <- "/Users/ladlab/Desktop/indiv_baboons"
 
 for(baboon in best_sampled) {
   cat("Fitting",baboon,"over all taxa...\n")
-  load(paste0(obj_path,"/",baboon,"_data.RData"))
+  load(paste0(data_path,"/",baboon,"_data.RData"))
   
+  D <- ncol(indiv_data$ys)
   W <- matrix(0, 3, 3)
   F <- matrix(c(1, 0, 1), 3, 1)
   
@@ -459,47 +465,54 @@ for(baboon in best_sampled) {
   fixed_W_scale <- 0
   
   diag(W) <- c(1, 1, 1/100)
-  n_samples <- 1000
+  
+  # ALR prior covariance
+  upsilon <- D-1+10 # lesser certainty
+  # supsilon <- D-1+20 # greater certainty; this should tighten the distribution around this mean
+  GG <- cbind(diag(D-1), -1) # log contrast for ALR with last taxon as reference;
+  # take diag as covariance over log abundances
+  Xi <- GG%*%(diag(D)*1)%*%t(GG)
+  # mean-center
+  Xi <- Xi*(upsilon-D-1)
 
   fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
-                       n_samples=1000, ret_mean=FALSE,
+                       upsilon, Xi,
+                       n_samples=n_samples, ret_mean=FALSE,
                        apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
 
-  cat("Saving fit object for",baboon,"...\n")
-  save(fit_obj, file=paste0(obj_path,"/",baboon,"_fit.RData"))
+  if(!is.null(fit_obj)) {
+    fit <- fit_obj$fit
+    Y <- fit_obj$Y
+    observations <- fit_obj$observations
   
-  fit <- fit_obj$fit
-  Y <- fit_obj$Y
-  observations <- fit_obj$observations
+    # plot covariance associated with simulation smoother samples
+    cov_Theta <- plot_cov_Theta(fit$D, fit$T, n_samples, F, fit$Thetas_smoothed, baboon, save_path=save_path, as_corr=FALSE)
+    png(paste0(save_path,"/",baboon,"_covTheta_corr.png"))
+    image(cov2cor(cov_Theta))
+    dev.off()
 
-  # plot covariance associated with simulation smoother samples
-  # cov_Theta <- plot_cov_Theta(fit$D, fit$T, n_samples, F, fit$Thetas_smoothed, baboon, save_path=save_path, as_corr=FALSE)
-  # png(paste0(save_path,"/",baboon,"_covTheta_corr.png"))
-  # image(cov2cor(cov_Theta))
-  # dev.off()
+    # high abundance
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                   save_path=save_path, lr_idx=1)
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                     save_path=save_path, lr_idx=2)
+    # low abundance
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                   save_path=save_path, lr_idx=21)
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                   save_path=save_path, lr_idx=25)
 
-  # high abundance
-  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                 save_path=save_path, lr_idx=1, ylim=c(-15,15))
-  #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-  #               save_path=save_path, lr_idx=2, ylim=c(-15,15))
-  # the contrarian
-  #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-  #               save_path=save_path, lr_idx=7, ylim=c(-15,15))
-  # low abundance
-  #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-  #               save_path=save_path, lr_idx=21, ylim=c(-15,15))
-  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                 save_path=save_path, lr_idx=25, ylim=c(-15,15))
+    if(eval_MAP) {
+      fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
+                           upsilon, Xi,
+                           n_samples=0, ret_mean=TRUE,
+                           apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
+      fit <- fit_obj$fit
+      Y <- fit_obj$Y
+      plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=FALSE)
+      #plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=TRUE)
+    }
 
-  if(eval_MAP) {
-    fit_obj_MAP <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
-                         n_samples=0, ret_mean=TRUE,
-                         apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
-    fit <- fit_obj_MAP$fit
-    Y <- fit_obj_MAP$Y
-    plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=FALSE)
-    plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=TRUE)
   }
 }
 
