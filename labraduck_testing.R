@@ -4,25 +4,6 @@ library(ggplot2)
 
 rm(list=ls())
 
-fro_dist <- function(A, B) {
-  D <- A - B
-  sum_all <- sum(c(D^2))
-  return(sqrt(sum_all))
-}
-
-# TODO: this needs to be debugged; it gives a different ordering over distance distributions
-# than the (dead simple) Frobenius norm distance OR is this scale-invariant?
-riemann_dist <- function(A, B) {
-  Ainv <- solve(A)
-  U <- chol(A) # upper triangular s.t. A <- t(U)%*%U
-  X <- t(U)%*%B%*%U
-  eigX <- eigen(X)
-  # if V are eigenvectors of A and A' is a diagonal matrix containing eigenvalues of A
-  # then log(A) = V%*%log(A')%*%V^(-1)
-  logX <- eigX$vectors%*%diag(log(eigX$values))%*%solve(eigX$vectors)
-  return(sum(diag(logX^2)))
-}
-
 plot_Sigma <- function(fit, Y, baboon, save_path="", append="", as_corr=FALSE) {
   if(as_corr) {
     png(paste0(save_path,"/",baboon,"_Sigma_corr",append,".png"))
@@ -462,13 +443,14 @@ best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR",
 best_sampled <- c("ACA")
 
 subset_time <- TRUE
-eval_MAP <- TRUE
+eval_MAP <- FALSE
 
+obj_path <- "C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data"
 save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
 
 for(baboon in best_sampled) {
   cat("Fitting",baboon,"over all taxa...\n")
-  load(paste0("C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data/",baboon,"_data.RData"))
+  load(paste0(obj_path,"/",baboon,"_data.RData"))
   
   W <- matrix(0, 3, 3)
   F <- matrix(c(1, 0, 1), 3, 1)
@@ -483,27 +465,30 @@ for(baboon in best_sampled) {
                        n_samples=1000, ret_mean=FALSE,
                        apply_smoother=TRUE, subset_time=subset_time, useSylv=TRUE)
 
+  cat("Saving fit object for",baboon,"...\n")
+  save(fit_obj, file=paste0(obj_path,"/",baboon,"_fit.RData"))
+  
   fit <- fit_obj$fit
   Y <- fit_obj$Y
   observations <- fit_obj$observations
 
   # plot covariance associated with simulation smoother samples
-  cov_Theta <- plot_cov_Theta(fit$D, fit$T, n_samples, F, fit$Thetas_smoothed, baboon, save_path=save_path, as_corr=FALSE)
-  png(paste0(save_path,"/",baboon,"_covTheta_corr.png"))
-  image(cov2cor(cov_Theta))
-  dev.off()
+  # cov_Theta <- plot_cov_Theta(fit$D, fit$T, n_samples, F, fit$Thetas_smoothed, baboon, save_path=save_path, as_corr=FALSE)
+  # png(paste0(save_path,"/",baboon,"_covTheta_corr.png"))
+  # image(cov2cor(cov_Theta))
+  # dev.off()
 
   # high abundance
   plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                  save_path=save_path, lr_idx=1, ylim=c(-15,15))
-  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                 save_path=save_path, lr_idx=2, ylim=c(-15,15))
+  #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+  #               save_path=save_path, lr_idx=2, ylim=c(-15,15))
   # the contrarian
-  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                 save_path=save_path, lr_idx=7, ylim=c(-15,15))
+  #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+  #               save_path=save_path, lr_idx=7, ylim=c(-15,15))
   # low abundance
-  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                 save_path=save_path, lr_idx=21, ylim=c(-15,15))
+  #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+  #               save_path=save_path, lr_idx=21, ylim=c(-15,15))
   plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
                  save_path=save_path, lr_idx=25, ylim=c(-15,15))
 
