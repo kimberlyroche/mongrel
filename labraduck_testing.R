@@ -437,21 +437,21 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                    gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations,
                    gamma_scale=gamma_scale, W_scale=W_scale,
-                   max_iter=100000, b1=0.95, step_size=0.002, eps_f=1e-11, decomp_method="eigen",
+                   max_iter=250000, b1=0.97, step_size=0.002, eps_f=1e-12, decomp_method="eigen",
                    n_samples=n_samples, ret_mean=ret_mean,
                    apply_smoother=apply_smoother, useSylv=useSylv, verbose=FALSE)
   return(list(fit=fit, Y=Y, observations=observations))
 }
 
 best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
-best_sampled <- c("ACA", "DUI", "LOG", "VET")
 
 subset_time <- TRUE
-eval_MAP <- TRUE
+eval_MAP <- FALSE
 
 n_samples <- 100
 
 save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
+save_path <- "C:/Users/kim/Desktop"
 #save_path <- "/Users/ladlab/Desktop/temp"
 
 data_path <- "C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data"
@@ -469,10 +469,14 @@ for(baboon in best_sampled) {
   W <- matrix(0, 3, 3)
   F <- matrix(c(1, 0, 1), 3, 1)
   
-  fixed_gamma_scale <- 0
-  fixed_W_scale <- 0
-  
   diag(W) <- c(1, 1, 1/100)
+  
+  # 1:1 signal:noise should be given by something like
+  # Tr(gamma_t * Sigma) = Tr(W_t * Sigma) = gamma_t = Tr(W_t)
+  # i.e. fixed_gamma_scale <- sum(diag(W)*fixed_W_scale)
+  # but this looks super fucked up in practice
+  fixed_W_scale <- 0
+  fixed_gamma_scale <- 0
   
   # ALR prior covariance
   upsilon <- D-1+10 # lesser certainty
@@ -488,11 +492,11 @@ for(baboon in best_sampled) {
                        n_samples=n_samples, ret_mean=FALSE,
                        apply_smoother=TRUE, subset_time=subset_time)
   
-  W_scales_fit[[baboon]] <- fit_obj$fit$W_scale
+  #W_scales_fit[[baboon]] <- fit_obj$fit$W_scale
   
-  cat("Saving fit object...\n")
-  Sigma_samples <- fit_obj$fit$Sigma
-  save(Sigma_samples, file=paste0(data_path,"/",baboon,"_fit.RData"))
+  #cat("Saving fit object...\n")
+  #Sigma_samples <- fit_obj$fit$Sigma
+  #save(Sigma_samples, file=paste0(data_path,"/",baboon,"_fit.RData"))
 
   if(!is.null(fit_obj)) {
     fit <- fit_obj$fit
@@ -506,15 +510,15 @@ for(baboon in best_sampled) {
     #dev.off()
 
     # high abundance
-    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "smoothed_mean", "dlm_eta"),
                    save_path=save_path, lr_idx=1)
     #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
     #                 save_path=save_path, lr_idx=2)
     # low abundance
     #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
     #               save_path=save_path, lr_idx=21)
-    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                   save_path=save_path, lr_idx=25)
+    #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+    #               save_path=save_path, lr_idx=25)
 
     if(eval_MAP) {
       fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
@@ -538,24 +542,30 @@ if(length(flagged) > 0) {
   cat("Local minima flagged for:",flagged,"\n")
 }
 
+n_samples_subset <- 100
+
 n_indiv <- length(best_sampled)
-all_samples <- matrix(NA, D-1, (D-1)*n_samples*n_indiv)
+all_samples <- matrix(NA, D-1, (D-1)*n_samples_subset*n_indiv)
 labels <- c()
 for(i in 1:n_indiv) {
   load(paste0(data_path,"/",best_sampled[i],"_fit.RData"))
-  dim(Sigma_samples) <- c((D-1), (D-1)*n_samples)
-  all_samples[,((i-1)*(D-1)*n_samples+1):(i*(D-1)*n_samples)] <- Sigma_samples
-  labels <- c(labels, rep(best_sampled[i], n_samples))
+  dim(Sigma_samples) <- c((D-1), (D-1), n_samples)
+  Sigma_samples <- Sigma_samples[,,1:n_samples_subset]
+  all_samples[,((i-1)*(D-1)*n_samples_subset+1):(i*(D-1)*n_samples_subset)] <- Sigma_samples
+  labels <- c(labels, rep(best_sampled[i], n_samples_subset))
 }
 
-distance_mat <- matrix(NA, n_samples*n_indiv, n_samples*n_indiv)
-for(i in 1:(n_indiv*n_samples)) {
-  for(j in i:(n_indiv*n_samples)) {
+distance_mat <- matrix(NA, n_samples_subset*n_indiv, n_samples_subset*n_indiv)
+use_Riemann <- FALSE
+for(i in 1:(n_indiv*n_samples_subset)) {
+  for(j in i:(n_indiv*n_samples_subset)) {
     i_idx <- (i-1)*(D-1)
     A <- all_samples[,(i_idx+1):(i_idx+(D-1))]
     j_idx <- (j-1)*(D-1)
     B <- all_samples[,(j_idx+1):(j_idx+(D-1))]
-    distance_mat[i,j] <- mat_dist(A, B, use_Riemann=TRUE)
+    A <- cov2cor(A)
+    B <- cov2cor(B)
+    distance_mat[i,j] <- mat_dist(A, B, use_Riemann=use_Riemann)
     distance_mat[j,i] <- distance_mat[i,j]
   }
 }
@@ -567,8 +577,12 @@ cat("Lambda 3:",fit$eig[3],"\n")
 
 df <- data.frame(x=fit$points[,1], y=fit$points[,2], labels=labels)
 p <- ggplot(df, aes(x=x, y=y, color=labels)) +
-  geom_point() +
-  ggtitle("Riemannian distance (4 indiv)")
+  geom_point()
+if(use_Riemann) {
+  p <- p + ggtitle("Riemannian distance")
+} else {
+  p <- p + ggtitle("Frobenius norm of difference")
+}
 p
 ggsave(paste0(save_path,"/posterior_ordination_test.png"), scale=2,
        width=4, height=4, units="in", dpi=100)
