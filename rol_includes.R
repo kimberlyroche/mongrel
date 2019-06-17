@@ -4,9 +4,17 @@ library(ggplot2)
 library(Rcpp)
 library(RcppEigen)
 
-#rm(list=ls())
-
 sourceCpp("src/cov_viz_test.cpp")
+
+save_path <- "/data/mukherjeelab/rulesoflife/plots/stray"
+#save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
+#save_path <- "/Users/ladlab/Desktop/temp"
+
+data_path <- "/data/mukherjeelab/rulesoflife/subsetted_indiv_data"
+#data_path <- "C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data"
+#data_path <- "/Users/ladlab/Desktop/indiv_baboons"
+
+D <- 26
 
 plot_Sigma <- function(fit, Y, baboon, save_path="", append="", as_corr=FALSE) {
   if(as_corr) {
@@ -428,7 +436,7 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
   omega <- 2*pi/365
   G <- matrix(c(cos(omega), -sin(omega), 0, sin(omega), cos(omega), 0, 0, 0, 1), 3, 3)
   C0 <- W
-  C0[3,3] <- C0[3,3]*10
+  C0[3,3] <- C0[3,3]*20
 
   # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
   M0 <- matrix(1, 3, D-1)
@@ -442,168 +450,3 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
                    apply_smoother=apply_smoother, useSylv=useSylv, verbose=FALSE)
   return(list(fit=fit, Y=Y, observations=observations))
 }
-
-best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
-
-subset_time <- TRUE
-eval_MAP <- FALSE
-
-n_samples <- 100
-
-save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
-save_path <- "C:/Users/kim/Desktop"
-#save_path <- "/Users/ladlab/Desktop/temp"
-
-data_path <- "C:/Users/kim/Documents/rules_of_life/subsetted_indiv_data"
-#data_path <- "/Users/ladlab/Desktop/indiv_baboons"
-
-# very crude flag to me to indicate subsequent runs converged to different places
-W_scales_fit <- list()
-flagged <- c()
-
-for(baboon in best_sampled) {
-  cat("Fitting",baboon,"over all taxa...\n")
-  load(paste0(data_path,"/",baboon,"_data.RData"))
-  
-  D <- ncol(indiv_data$ys)
-  W <- matrix(0, 3, 3)
-  F <- matrix(c(1, 0, 1), 3, 1)
-  
-  diag(W) <- c(1, 1, 1/100)
-  
-  # 1:1 signal:noise should be given by something like
-  # Tr(gamma_t * Sigma) = Tr(W_t * Sigma) = gamma_t = Tr(W_t)
-  # i.e. fixed_gamma_scale <- sum(diag(W)*fixed_W_scale)
-  # but this looks super fucked up in practice
-  fixed_W_scale <- 0
-  fixed_gamma_scale <- 0
-  
-  # ALR prior covariance
-  upsilon <- D-1+10 # lesser certainty
-  # supsilon <- D-1+20 # greater certainty; this should tighten the distribution around this mean
-  GG <- cbind(diag(D-1), -1) # log contrast for ALR with last taxon as reference;
-  # take diag as covariance over log abundances
-  Xi <- GG%*%(diag(D)*1)%*%t(GG)
-  # mean-center
-  Xi <- Xi*(upsilon-D-1)
-
-  fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
-                       upsilon, Xi,
-                       n_samples=n_samples, ret_mean=FALSE,
-                       apply_smoother=TRUE, subset_time=subset_time)
-  
-  #W_scales_fit[[baboon]] <- fit_obj$fit$W_scale
-  
-  #cat("Saving fit object...\n")
-  #Sigma_samples <- fit_obj$fit$Sigma
-  #save(Sigma_samples, file=paste0(data_path,"/",baboon,"_fit.RData"))
-
-  if(!is.null(fit_obj)) {
-    fit <- fit_obj$fit
-    Y <- fit_obj$Y
-    observations <- fit_obj$observations
-  
-    # plot covariance associated with simulation smoother samples
-    #cov_Theta <- plot_cov_Theta(fit$D, fit$T, n_samples, F, fit$Thetas_smoothed, baboon, save_path=save_path, as_corr=FALSE)
-    #png(paste0(save_path,"/",baboon,"_covTheta_corr.png"))
-    #image(cov2cor(cov_Theta))
-    #dev.off()
-
-    # high abundance
-    plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "smoothed_mean", "dlm_eta"),
-                   save_path=save_path, lr_idx=1)
-    #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-    #                 save_path=save_path, lr_idx=2)
-    # low abundance
-    #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-    #               save_path=save_path, lr_idx=21)
-    #plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-    #               save_path=save_path, lr_idx=25)
-
-    if(eval_MAP) {
-      fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
-                           upsilon, Xi,
-                           n_samples=0, ret_mean=TRUE,
-                           apply_smoother=FALSE, subset_time=subset_time)
-      
-      if(abs(fit_obj$fit$W_scale - W_scales_fit[[baboon]]) > 0.1) {
-        flagged <- c(flagged, baboon)
-      }
-      
-      fit <- fit_obj$fit
-      Y <- fit_obj$Y
-      plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=FALSE)
-      plot_Sigma(fit, Y, baboon, save_path=save_path, as_corr=TRUE)
-    }
-  }
-}
-
-if(length(flagged) > 0) {
-  cat("Local minima flagged for:",flagged,"\n")
-}
-
-n_samples_subset <- 100
-
-n_indiv <- length(best_sampled)
-all_samples <- matrix(NA, D-1, (D-1)*n_samples_subset*n_indiv)
-labels <- c()
-for(i in 1:n_indiv) {
-  load(paste0(data_path,"/",best_sampled[i],"_fit.RData"))
-  dim(Sigma_samples) <- c((D-1), (D-1), n_samples)
-  Sigma_samples <- Sigma_samples[,,1:n_samples_subset]
-  all_samples[,((i-1)*(D-1)*n_samples_subset+1):(i*(D-1)*n_samples_subset)] <- Sigma_samples
-  labels <- c(labels, rep(best_sampled[i], n_samples_subset))
-}
-
-distance_mat <- matrix(NA, n_samples_subset*n_indiv, n_samples_subset*n_indiv)
-use_Riemann <- FALSE
-for(i in 1:(n_indiv*n_samples_subset)) {
-  for(j in i:(n_indiv*n_samples_subset)) {
-    i_idx <- (i-1)*(D-1)
-    A <- all_samples[,(i_idx+1):(i_idx+(D-1))]
-    j_idx <- (j-1)*(D-1)
-    B <- all_samples[,(j_idx+1):(j_idx+(D-1))]
-    A <- cov2cor(A)
-    B <- cov2cor(B)
-    distance_mat[i,j] <- mat_dist(A, B, use_Riemann=use_Riemann)
-    distance_mat[j,i] <- distance_mat[i,j]
-  }
-}
-
-fit <- cmdscale(distance_mat, eig=TRUE, k=2) # k is the number of dim
-cat("Lambda 1:",fit$eig[1],"\n")
-cat("Lambda 2:",fit$eig[2],"\n")
-cat("Lambda 3:",fit$eig[3],"\n")
-
-df <- data.frame(x=fit$points[,1], y=fit$points[,2], labels=labels)
-p <- ggplot(df, aes(x=x, y=y, color=labels)) +
-  geom_point()
-if(use_Riemann) {
-  p <- p + ggtitle("Riemannian distance")
-} else {
-  p <- p + ggtitle("Frobenius norm of difference")
-}
-p
-ggsave(paste0(save_path,"/posterior_ordination_test.png"), scale=2,
-       width=4, height=4, units="in", dpi=100)
-
-# TODO: how to visualize distance: find most dissimiliar pair within and most dissimilar pair between
-# max_dist <- which(distance_mat == max(distance_mat), arr.ind = TRUE)
-# max_id1 <- max_dist[1,"row"][[1]]
-# max_id2 <- max_dist[1,"col"][[1]]
-
-# first 2 samples for individual 1
-image(all_samples[,1:(D-1)])
-image(all_samples[,((D-1)+1):(2*(D-1))])
-
-image(all_samples[,1:(D-1)])
-image(all_samples[,(((D-1)*n_samples)+1):(((D-1)*n_samples)+(D-1))])
-
-
-
-
-
-
-
-
-
