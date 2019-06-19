@@ -1,3 +1,11 @@
+args <- commandArgs(trailingOnly=TRUE)
+
+if(length(args) < 1) {
+  stop("Testing usage: Rscript rol_viz_posteriors.R TRUE", call.=FALSE)
+}
+
+use_Riemann <- as.logical(args[1])
+
 devtools::load_all("/data/mukherjeelab/labraduck")
 source("rol_includes.R")
 
@@ -17,15 +25,12 @@ for(i in 1:n_indiv) {
 }
 
 distance_mat <- matrix(NA, n_samples_subset*n_indiv, n_samples_subset*n_indiv)
-use_Riemann <- TRUE
 for(i in 1:(n_indiv*n_samples_subset)) {
   for(j in i:(n_indiv*n_samples_subset)) {
     i_idx <- (i-1)*(D-1)
     A <- all_samples[,(i_idx+1):(i_idx+(D-1))]
     j_idx <- (j-1)*(D-1)
     B <- all_samples[,(j_idx+1):(j_idx+(D-1))]
-    A <- cov2cor(A)
-    B <- cov2cor(B)
     distance_mat[i,j] <- mat_dist(A, B, use_Riemann=use_Riemann)
     distance_mat[j,i] <- distance_mat[i,j]
   }
@@ -43,8 +48,14 @@ if(use_Riemann) {
 } else {
   p <- p + ggtitle("Frobenius norm of difference")
 }
-ggsave(paste0(save_path,"/posterior_ordination_test.png"), scale=2,
-       width=4, height=4, units="in", dpi=100)
+plot_save_name <- "Sigma_posterior_ordination_"
+if(use_Riemann) {
+  plot_save_name <- paste0(plot_save_name,"Riemann.png")
+} else {
+  plot_save_name <- paste0(plot_save_name,"Frobenius.png")
+}
+ggsave(paste0(save_path,"/",plot_save_name), scale=2,
+         width=4, height=4, units="in", dpi=100)
 
 
 

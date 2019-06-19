@@ -7,9 +7,6 @@ if(length(args) < 6) {
   stop("Testing usage: Rscript rol_fit_labraduck.R ACA TRUE FALSE TRUE FALSE 100\nScaled up usage: Rscript rol_fit_labraduck.R ACA FALSE TRUE TRUE TRUE 200", call.=FALSE)
 }
 
-devtools::load_all("/data/mukherjeelab/labraduck")
-source("rol_includes.R")
-
 baboon <- args[1]
 subset_time <- as.logical(args[2])
 eval_MAP <- as.logical(args[3])
@@ -17,14 +14,21 @@ use_smooth <- as.logical(args[4])
 save_fit <- as.logical(args[5])
 n_samples <- as.numeric(args[6])
 
+devtools::load_all("/data/mukherjeelab/labraduck")
+source("rol_includes.R")
+
 cat("Fitting",baboon,"over all taxa...\n")
 load(paste0(data_path,"/",baboon,"_data.RData"))
-  
+
+alr_ys <- driver::alr(indiv_data$ys + 0.5)
+alr_means <- colMeans(alr_ys)
+
 W <- matrix(0, 3, 3)
 F <- matrix(c(1, 0, 1), 3, 1)
   
-diag(W) <- c(1, 1, 1/100)
-  
+#diag(W) <- c(1, 1, 0.01) # give the intercept (local level) low variance
+diag(W) <- 1
+ 
 # 1:1 signal:noise should be given by something like
 # Tr(gamma_t * Sigma) = Tr(W_t * Sigma) = gamma_t = Tr(W_t)
 # i.e. fixed_gamma_scale <- sum(diag(W)*fixed_W_scale)
@@ -43,8 +47,15 @@ Xi <- GG%*%(diag(D)*1)%*%t(GG)
 # mean-center
 Xi <- Xi*(upsilon-D-1)
 
+#C0 <- W*10 # high initial variance
+C0 <- W
+
+# set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
+M0 <- matrix(1, 3, D-1)
+M0[3,] <- alr_means
+
 fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
-                     upsilon, Xi,
+                     upsilon, Xi, M0, C0,
                      n_samples=n_samples, ret_mean=FALSE,
                      apply_smoother=use_smooth, subset_time=subset_time)
 
@@ -77,7 +88,7 @@ plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta
 
 if(eval_MAP) {
   fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
-                       upsilon, Xi,
+                       upsilon, Xi, M0, C0,
                        n_samples=0, ret_mean=TRUE,
                        apply_smoother=FALSE, subset_time=subset_time)
       

@@ -1,10 +1,13 @@
 library(stray)
+library(driver)
 library(phyloseq)
 library(ggplot2)
 library(Rcpp)
 library(RcppEigen)
 
 sourceCpp("src/cov_viz_test.cpp")
+
+best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
 
 save_path <- "/data/mukherjeelab/rulesoflife/plots/stray"
 #save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
@@ -387,7 +390,7 @@ plot_posterior <- function(Y, fit, F, observations, baboon, save_path="",
   }
   width <- round(log(T/100)*3)
   ggsave(filename=paste0(save_path,"/",baboon,"_Theta_smoothed",append_str,"_LR",lr_idx,".png"),
-         units="in", scale=2, width=width, height=2)
+         units="in", scale=2, dpi=100, width=width, height=2)
 }
 
 record_time <- function(fit, baboon, save_path="", append_str="") {
@@ -398,7 +401,7 @@ record_time <- function(fit, baboon, save_path="", append_str="") {
   sink()
 }
 
-fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
+fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi, M0, C0,
                       n_samples=2000, ret_mean=FALSE,
                       apply_smoother=FALSE, subset_time=TRUE, useSylv=FALSE) {
   Y_full <- indiv_data$ys
@@ -435,12 +438,6 @@ fit_model <- function(indiv_data, W, F, gamma_scale=0, W_scale=0, upsilon, Xi,
   }
   omega <- 2*pi/365
   G <- matrix(c(cos(omega), -sin(omega), 0, sin(omega), cos(omega), 0, 0, 0, 1), 3, 3)
-  C0 <- W
-  C0[3,3] <- C0[3,3]*20
-
-  # set Fourier coefficients uniformly at 1; set offset to mean for this logratio over all timepoints
-  M0 <- matrix(1, 3, D-1)
-  #M0[3,] <- alr_means
 
   fit <- labraduck(Y=Y, upsilon=upsilon, Xi=Xi,
                    gamma=gamma, F=F, G=G, W=W, M0=M0, C0=C0, observations=observations,
