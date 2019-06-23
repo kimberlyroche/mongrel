@@ -17,7 +17,7 @@ n_indiv <- length(best_sampled)
 all_samples <- matrix(NA, D-1, (D-1)*n_samples_subset*n_indiv)
 labels <- c()
 for(i in 1:n_indiv) {
-  load(paste0(data_path,"/",best_sampled[i],"_fit.RData"))
+  load(paste0(data_path,"/",best_sampled[i],"_labraduckfit.RData"))
   dim(Sigma_samples) <- c((D-1), (D-1), n_samples)
   Sigma_samples <- Sigma_samples[,,1:n_samples_subset]
   all_samples[,((i-1)*(D-1)*n_samples_subset+1):(i*(D-1)*n_samples_subset)] <- Sigma_samples

@@ -9,7 +9,9 @@ sourceCpp("src/cov_viz_test.cpp")
 
 best_sampled <- c("DUI", "ECH", "LOG", "VET", "DUX", "LEB", "ACA", "OPH", "THR", "VAI")
 
-save_path <- "/data/mukherjeelab/rulesoflife/plots/stray"
+#save_path <- "/data/mukherjeelab/rulesoflife/plots/labraduck_Wdiag"
+save_path <- "/data/mukherjeelab/rulesoflife/plots/labraduck_Wweight"
+#save_path <- "/data/mukherjeelab/rulesoflife/plots/labraduck_Fweight"
 #save_path <- "C:/Users/kim/Documents/rules_of_life/plots/stray"
 #save_path <- "/Users/ladlab/Desktop/temp"
 
@@ -371,19 +373,9 @@ plot_posterior <- function(Y, fit, F, observations, baboon, save_path="",
   if("optimized_eta" %in% plot_what) {
     p <- p + geom_point(aes(x=timepoint, y=ymin_etaopt), color="red", size=1) + geom_point(aes(x=timepoint, y=ymax_etaopt), color="red", size=1)
   }
-  p <- p + geom_point(aes(x=timepoint, y=alrY), color="blue", size=1) + theme_minimal()
-  if(lr_idx == 1) {
-    p <- p + ylab("ALR(Bifidobacteriaceae/Helicobacteraceae)")
-  } else if(lr_idx == 2) {
-    p <- p + ylab("ALR(Prevotellaceae/Helicobacteraceae)")
-  } else if(lr_idx == 7) {
-    p <- p + ylab("ALR(Muribaculaceae/Helicobacteraceae)")
-  } else if(lr_idx == 21) {
-    p <- p + ylab("ALR(Christensenellaceae/Helicobacteraceae)")
-  } else {
-    # index 25
-    p <- p + ylab("ALR(Lactobacillaceae/Helicobacteraceae)")
-  }
+  p <- p + geom_point(aes(x=timepoint, y=alrY), color="blue", size=1) +
+       theme_minimal() +
+       ylab("ALR coord")
   #show(p)
   if(!is.null(ylim)) {
     p <- p + ylim(ylim[1], ylim[2])

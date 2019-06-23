@@ -24,17 +24,25 @@ alr_ys <- driver::alr(indiv_data$ys + 0.5)
 alr_means <- colMeans(alr_ys)
 
 W <- matrix(0, 3, 3)
+
+# rulesoflife/plots/labraduck_Wdiag
+#F <- matrix(c(1, 0, 1), 3, 1)
+#diag(W) <- 1
+
+# rulesoflife/plots/labraduck_Wweight
 F <- matrix(c(1, 0, 1), 3, 1)
-  
-#diag(W) <- c(1, 1, 0.01) # give the intercept (local level) low variance
-diag(W) <- 1
- 
+diag(W) <- c(0.1, 0.1, 1)
+
+# rulesoflife/plots/labraduck_Fweight
+#F <- matrix(c(0.15, 0, 0.85), 3, 1)
+#diag(W) <- 1
+
 # 1:1 signal:noise should be given by something like
 # Tr(gamma_t * Sigma) = Tr(W_t * Sigma) = gamma_t = Tr(W_t)
 # i.e. fixed_gamma_scale <- sum(diag(W)*fixed_W_scale)
 # but this looks super fucked up in practice
 fixed_W_scale <- 0
-fixed_gamma_scale <- 0
+fixed_gamma_scale <- 0.5
 cat("Using W_scale:",fixed_W_scale,"\n")
 cat("Using gamma_scale:",fixed_gamma_scale,"\n\n")
   
@@ -62,7 +70,7 @@ fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fi
 if(save_fit) {
   cat("Saving fit object...\n")
   Sigma_samples <- fit_obj$fit$Sigma
-  save(Sigma_samples, file=paste0(data_path,"/",baboon,"_fit.RData"))
+  save(Sigma_samples, file=paste0(data_path,"/",baboon,"_labraduckfit.RData"))
 }
 
 fit <- fit_obj$fit
@@ -75,16 +83,28 @@ observations <- fit_obj$observations
 # image(cov2cor(cov_Theta))
 # dev.off()
 
-# high abundance
-plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-               save_path=save_path, lr_idx=1)
-plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-                 save_path=save_path, lr_idx=2)
-# low abundance
-plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-               save_path=save_path, lr_idx=21)
-plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
-               save_path=save_path, lr_idx=25)
+LR_coords <- NULL
+# chosen because they give (1) a reference (2) an apparent positive covary-er (3) zero covary-er
+if(baboon == "ACA") {
+  LR_coords <- c(19, 21, 20)
+} else if(baboon == "DUX") {
+  LR_coords <- c(19, 21, 20)
+} else if(baboon == "LOG") {
+  LR_coords <- c(1, 15, 7)
+} else if(baboon == "THR") {
+  LR_coords <- c(1, 15, 3)
+} else if(baboon == "VAI") {
+  LR_coords <- c(1, 25, 21)
+}
+
+if(!is.null(LR_coords)) {
+  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                 save_path=save_path, lr_idx=LR_coords[1])
+  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                   save_path=save_path, lr_idx=LR_coords[2])
+  plot_posterior(Y, fit, F, observations, baboon, plot_what=c("smoothed", "dlm_eta"),
+                 save_path=save_path, lr_idx=LR_coords[3])
+}
 
 if(eval_MAP) {
   fit_obj <- fit_model(indiv_data, W, F, gamma_scale=fixed_gamma_scale, W_scale=fixed_W_scale,
