@@ -83,7 +83,7 @@ maltipoo <- function(Y=NULL, X=NULL, upsilon=NULL, Theta=NULL, U=NULL,
     if (("Eta" %in% pars) & (is.null(X))) stop("X must be given if Eta is to be sampled")
     # create matipoofit object and pass to sample_prior then return
     out <- maltipoofit(N=N, D=D, Q=Q, P=P, coord_system="alr", alr_base=D, 
-                      upsilon=upsilon, Theta=Theta, Xi=Xi,U=U, 
+                      upsilon=upsilon, Theta=Theta, Xi=Xi, U=U, 
                       # names_categories=rownames(Y), # these won't be present... 
                       # names_samples=colnames(Y), 
                       # names_covariates=colnames(X), 
@@ -95,7 +95,6 @@ maltipoo <- function(Y=NULL, X=NULL, upsilon=NULL, Theta=NULL, U=NULL,
     if(is.null(init)) init <- random_pibble_init(Y)   # initialize init 
     if(is.null(ellinit)) ellinit <- rep(0, P)
   }
-  
   
   # for optimization and laplace approximation
   calcGradHess <- args_null("calcGradHess", args, TRUE)
@@ -196,7 +195,7 @@ maltipoo <- function(Y=NULL, X=NULL, upsilon=NULL, Theta=NULL, U=NULL,
   attr(out, "class") <- c("maltipoofit", "pibblefit")
   # add names if present 
   if (use_names) out <- name(out)
-  verify(out) # verify the pibblefit object
+  #verify(out) # verify the pibblefit object
   return(out)
 }
 

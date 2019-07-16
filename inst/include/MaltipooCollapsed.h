@@ -50,8 +50,10 @@ class MaltipooCollapsed : public Numer::MFuncGrad
     Eigen::ArrayXd m;
     Eigen::RowVectorXd n;
     MatrixXd S;  // I_D-1 + KEAE'
-    Eigen::ColPivHouseholderQR<MatrixXd> Sdec;
-    Eigen::ColPivHouseholderQR<MatrixXd> Ainvdec;
+    // Eigen::ColPivHouseholderQR<MatrixXd> Sdec;
+    // Eigen::ColPivHouseholderQR<MatrixXd> Ainvdec;
+    Eigen::PartialPivLU<MatrixXd> Sdec;
+    Eigen::PartialPivLU<MatrixXd> Ainvdec;
     MatrixXd E;  // eta-ThetaX
     ArrayXXd O;  // exp{eta}
     // only needed for gradient and hessian
@@ -94,7 +96,6 @@ class MaltipooCollapsed : public Numer::MFuncGrad
       for (int i=0; i<P; i++){
         Ainv += exp(ell(i))*XTUX.middleRows(N*i, N);
       }
-      //Eigen::FullPivLU<MatrixXd> lu(Ainv);
       Ainvdec.compute(Ainv);
       A = Ainvdec.inverse(); 
         
@@ -113,7 +114,7 @@ class MaltipooCollapsed : public Numer::MFuncGrad
       rho = rhovec; // probably could be done in one line rather than 2 (above)
       C.noalias() = A*E.transpose();
       R.noalias() = Sdec.solve(K); // S^{-1}K
-      M.noalias() = Ainv*E.transpose()*R*E*Ainv;
+      M.noalias() = A*E.transpose()*R*E*A;
     }
     
     // Must have called updateWithEtaLL first 
@@ -121,10 +122,28 @@ class MaltipooCollapsed : public Numer::MFuncGrad
       const Map<const MatrixXd> eta(etavec.data(), D-1, N);
       double ll=0.0;
       // start with multinomial ll
-      ll += (Y.topRows(D-1)*eta.array()).sum() - n*m.log().matrix();
-      // Now compute collapsed prior ll
-      ll -= delta*Sdec.logAbsDeterminant();
-      ll -= 0.5*(D-1)*Ainvdec.logAbsDeterminant(); // repeated can speed up in future
+      double p1 = (Y.topRows(D-1)*eta.array()).sum() - n*m.log().matrix();
+      ll += p1;
+      double ld = 0.0;
+      double c = Sdec.permutationP().determinant();
+      VectorXd diagLU = Sdec.matrixLU().diagonal();
+      for (unsigned i = 0; i < diagLU.rows(); ++i) {
+        const double& lii = diagLU(i);
+        if (lii < 0.0) c *= -1;
+        ld += log(std::abs(lii));
+      }
+      ld += log(c);
+      ll += -delta*ld;
+      ld = 0.0;
+      c = Ainvdec.permutationP().determinant();
+      diagLU = Ainvdec.matrixLU().diagonal();
+      for (unsigned i = 0; i < diagLU.rows(); ++i) {
+        const double& lii = diagLU(i);
+        if (lii < 0.0) c *= -1;
+        ld += log(std::abs(lii));
+      }
+      ld += log(c);
+      ll -= 0.5*(D-1)*ld;
       return ll;
     }
     
