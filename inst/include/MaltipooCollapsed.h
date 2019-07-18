@@ -124,6 +124,7 @@ class MaltipooCollapsed : public Numer::MFuncGrad
       // start with multinomial ll
       double p1 = (Y.topRows(D-1)*eta.array()).sum() - n*m.log().matrix();
       ll += p1;
+      // Rcout << "LL update:" << std::endl << "\t" << p1 << std::endl;
       double ld = 0.0;
       double c = Sdec.permutationP().determinant();
       VectorXd diagLU = Sdec.matrixLU().diagonal();
@@ -133,6 +134,7 @@ class MaltipooCollapsed : public Numer::MFuncGrad
         ld += log(std::abs(lii));
       }
       ld += log(c);
+      // Rcout << "\t" << -delta*ld << std::endl;
       ll += -delta*ld;
       ld = 0.0;
       c = Ainvdec.permutationP().determinant();
@@ -143,6 +145,7 @@ class MaltipooCollapsed : public Numer::MFuncGrad
         ld += log(std::abs(lii));
       }
       ld += log(c);
+      // Rcout << "\t" << -0.5*(D-1)*ld << std::endl;
       ll -= 0.5*(D-1)*ld;
       return ll;
     }
@@ -150,7 +153,7 @@ class MaltipooCollapsed : public Numer::MFuncGrad
     // Must have called updateWithEtaLL and then updateWithEtaGH first 
     VectorXd calcGrad(const Ref<const VectorXd>& ell){ 
       // For Multinomial
-      MatrixXd g = (Y.topRows(D-1)  - (rhomat.array().rowwise()*n.array())).matrix();
+      MatrixXd g = (Y.topRows(D-1) - (rhomat.array().rowwise()*n.array())).matrix();
       // For MatrixVariate T
       g.noalias() += -delta*(R + R.transpose())*C.transpose();
       Map<VectorXd> eg(g.data(), g.size()); 

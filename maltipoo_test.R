@@ -1,21 +1,25 @@
 library(matrixsampling)
 library(driver)
-devtools::load_all("/Users/ladlab/stray")
+
+#devtools::load_all("/Users/ladlab/stray")
+#devtools::load_all("C:/Users/kim/Documents/stray")
+
 # simulate data from maltipoo model
 
+N1 <- 55
+N2 <- 103
 D <- 20
-N <- 100
+N <- N1 + N2
 # covariates will be an intercept and a batch label
 
 X <- matrix(0, 2, N)
-X[1,1:(N/2)] <- 1
-X[2,((N/2)+1):N] <- 1
+X[1,1:N1] <- 1
+X[2,(N1+1):N] <- 1
 
-U1 <- matrix(0, 2, 2)
-U1[1,1] <- 1
-U2 <- matrix(0, 2, 2)
-U2[2,2] <- 1
-
+U1 <- matrix(c(1, 0,
+               0, 0), 2, 2, byrow=TRUE)
+U2 <- matrix(c(0, 0,
+               0, 1), 2, 2, byrow=TRUE)
 Gamma <- 0.1*U1 + 5*U2
 
 upsilon <- (D-1)+100
@@ -29,20 +33,48 @@ Lambda <- rmatrixnormal(1, Theta, Sigma, Gamma)[,,1]
 Eta <- Lambda%*%X + t(Sigma.sq)%*%rmatrixnormal(1, matrix(0, D-1, N), diag(D-1), diag(N))[,,1]
 Pi <- alrInv(t(Eta))
 Y <- apply(Pi, 1, function(x) rmultinom(1, rpois(1, 10000), x)) # D x N
-logB1 <- log(Y[,1:(N/2)] + 0.5)
-logB2 <- log(Y[,(N/2+1):N] + 0.5)
-plot(density(logB1)) # distribution of counts for batch 1
-lines(density(logB2), col="red") # distribution of counts for batch 2
-cat("SD batch 1:",sd(c(logB1))," SD batch 2:",sd(c(logB2)),"\n")
+#logB1 <- log(Y[,1:(N/2)] + 0.5)
+#logB2 <- log(Y[,(N/2+1):N] + 0.5)
+#plot(density(logB1)) # distribution of counts for batch 1
+#lines(density(logB2), col="red") # distribution of counts for batch 2
+#cat("SD batch 1:",sd(c(logB1))," SD batch 2:",sd(c(logB2)),"\n")
+
+#image(log(Y + 0.5))
 
 # does this make sense?
 
 U <- matrix(0, 4, 2)
 U[1:2,1:2] <- U1
 U[3:4,1:2] <- U2
-U <- U
 
 # maltipoo never learns different scales for these guys; what's going on?
-maltipoofit <- maltipoo(Y=Y, X=X, upsilon=upsilon, Theta=Theta, U=U, Xi=Xi, n_samples=100)
+maltipoofit <- maltipoo(Y=Y, X=X, upsilon=upsilon, Theta=Theta, U=U, Xi=Xi, n_samples=0)
 maltipoofit$VCScale
+#image(maltipoofit$Eta[,,1])
+
+# this "breaks" when you take counts from 10K to 100K
+# no change in likelihood because it's dominated by the counts?!
+
+# what does pibble do under the same conditions?
+
+pibblefit <- pibble(Y=Y, X=X, upsilon=upsilon, Theta=Theta, U=diag(2), Xi=Xi, n_samples=0)
+image(pibblefit$Eta[,,1])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

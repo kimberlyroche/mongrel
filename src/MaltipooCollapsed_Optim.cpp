@@ -128,8 +128,9 @@ List optimMaltipooCollapsed(const Eigen::ArrayXXd Y,
   // Pick optimizer (ADAM - without perturbation appears to be best)
   //   ADAM with perturbations not fully implemented
   // int status = Numer::optim_lbfgs(cm, eta, nllopt);
-  int status = adam::optim_adam(cm, pars, nllopt, b1, b2, step_size, epsilon,
-                                eps_f, eps_g, max_iter, verbose, verbose_rate);
+  //int status = adam::optim_adam(cm, pars, nllopt, b1, b2, step_size, epsilon,
+  //                              eps_f, eps_g, max_iter, verbose, verbose_rate);
+  int status = Numer::optim_lbfgs(cm, pars, nllopt, max_iter, eps_f, eps_g);
   // //int status = adamperturb::optim_adam(cm, eta, nllopt); 
   
   if (status<0)
