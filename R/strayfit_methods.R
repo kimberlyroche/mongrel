@@ -86,7 +86,10 @@ summary_check_precomputed <- function(m, pars){
 summary.pibblefit <- function(object, pars=NULL, use_names=TRUE, as_factor=FALSE, 
                                gather_prob=FALSE, ...){
   if (is.null(pars)) {
-    pars <- c("Eta", "Lambda", "Sigma")
+    pars <- c()
+    if (!is.null(object$Eta)) pars <- c(pars, "Eta")
+    if (!is.null(object$Lambda)) pars <- c(pars, "Lambda")
+    if (!is.null(object$Sigma)) pars <- c(pars, "Sigma")
     pars <- pars[pars %in% names(object)] # only for the ones that are present 
   }
   
@@ -98,12 +101,22 @@ summary.pibblefit <- function(object, pars=NULL, use_names=TRUE, as_factor=FALSE
                          Parameter %in% pars)
   # Suppress warnings about stupid implict NAs, this is on purpose. 
   suppressWarnings({
-  
-    if (object$coord_system != "proportions") {
-      mtidy <- dplyr::group_by(mtidy, Parameter, coord, coord2, sample, covariate) 
-    } else {
-      mtidy <- dplyr::group_by(mtidy, Parameter, coord, sample, covariate)
+    
+    vars <- c()
+    if ("Eta" %in% pars) vars <- c(vars, "coord", "sample")
+    if ("Lambda" %in% pars) vars <- c(vars, "coord", "covariate")
+    if (("Sigma" %in% pars) & (object$coord_system != "proportions")) {
+      vars <- c(vars, "coord", "coord2")
     }
+    vars <- unique(vars)
+    vars <- rlang::syms(vars)
+    
+    mtidy <- dplyr::group_by(mtidy, Parameter, !!!vars)
+    # if ((object$coord_system != "proportions")) {
+    #   mtidy <- dplyr::group_by(mtidy, Parameter, coord, coord2, sample, covariate) 
+    # } else {
+    #   mtidy <- dplyr::group_by(mtidy, Parameter, coord, sample, covariate)
+    # }
     if (!gather_prob){
       mtidy <- mtidy %>% 
         driver::summarise_posterior(val, ...) %>%
@@ -243,7 +256,7 @@ as.list.pibblefit <- function(x,...){
 #' @examples 
 #' sim <- pibble_sim()
 #' fit <- pibble(sim$Y, sim$X)
-#' predict(fit)
+#' predict(fit)[,,1:2] # just show 2 samples
 predict.pibblefit <- function(object, newdata=NULL, response="LambdaX", size=NULL, 
                                use_names=TRUE, summary=FALSE, iter=NULL, from_scratch=FALSE, ...){
   
@@ -341,14 +354,12 @@ predict.pibblefit <- function(object, newdata=NULL, response="LambdaX", size=NUL
   if (response=="Eta") return(Eta)
   
   # Draw Y
-  if (!from_scratch){
+  if (from_scratch){
     Pi <- alrInv_array(Eta, d=nrow(Eta)+1, coords=1)
   } else {
     if (is.null(object$Eta)) stop("pibblefit object does not contain samples of Eta")
-    
     com <- names(object)[!(names(object) %in% c("Lambda", "Sigma"))] # to save computation
     Pi <- to_proportions(object[com])$Eta
-    Pi <- alrInv_array(Eta, d=nrow(Eta)+1, coords=1)
   }
   Ypred <- array(0, dim=c(object$D, nnew, iter))
   for (i in 1:iter){
@@ -553,8 +564,10 @@ sample_prior.pibblefit <- function(m, n_samples=2000,
 # ppc_summary -------------------------------------------------------------
 
 #' @rdname ppc_summary
+#' @param from_scratch should predictions of Y come from fitted Eta or from 
+#'   predictions of Eta from posterior of Lambda? (default: false)
 #' @export
-ppc_summary.pibblefit <- function(m, ...){
+ppc_summary.pibblefit <- function(m, from_scratch=FALSE, ...){
   if (!is.null(m$Y)) {
     o <- order(m$Y, decreasing=TRUE)
   } else {
@@ -566,7 +579,7 @@ ppc_summary.pibblefit <- function(m, ...){
             "results will be missleading")
   }
   
-  pp <- predict(m, response="Y")
+  pp <- predict(m, response="Y", from_scratch=from_scratch)
   pp <- matrix(pp, m$D*m$N, m$iter) 
   pp <- pp[o,]
   
