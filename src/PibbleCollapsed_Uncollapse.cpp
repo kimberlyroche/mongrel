@@ -148,7 +148,7 @@ List uncollapsePibble(const Eigen::Map<Eigen::VectorXd> eta, // note this is ess
       Map<VectorXd> LambdaNVec(LambdaN.data(), LambdaN.size());
       Map<VectorXd> XiNVec(XiN.data(), XiN.size());
       LambdaDraw0.col(i) = LambdaNVec;
-      SigmaDraw0.col(i) = (upsilonN-D)*XiNVec; // mean of inverse wishart
+      SigmaDraw0.col(i) = XiNVec/(upsilonN-D-2); // mean of inverse wishart
     } else {
       // Draw Random Component
       rInvWishRevCholesky_thread_inplace(LSigmaDraw, upsilonN, XiN, rng);

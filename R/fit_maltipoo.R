@@ -91,8 +91,11 @@ maltipoo <- function(Y=NULL, X=NULL, upsilon=NULL, Theta=NULL, U=NULL,
     out <- sample_prior(out, n_samples=n_samples, pars=pars, use_names=use_names)
     return(out)
   } else {
-    if (is.null(X)) stop("X must be given to fit model")
-    if(is.null(init)) init <- random_pibble_init(Y)   # initialize init 
+    if(is.null(X)) stop("X must be given to fit model")
+    if(is.null(init)) {
+      init <- random_pibble_init(Y)   # initialize init 
+      #init <- t(driver::alr(t(Y) + 0.5))
+    }
     if(is.null(ellinit)) ellinit <- rep(0, P)
   }
   

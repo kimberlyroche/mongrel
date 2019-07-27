@@ -110,7 +110,6 @@ class PibbleCollapsed : public mongrel::MongrelModel {
       double ll=0.0;
       // start with multinomial ll
       ll += (Y.topRows(D-1)*eta.array()).sum() - n*m.log().matrix();
-      Rcout << "LL update:" << std::endl << "\t" << ll << std::endl;
       // Now compute collapsed prior ll
       //ll -= delta*Sdec.logAbsDeterminant();
       // Following was adapted from : 
@@ -124,7 +123,6 @@ class PibbleCollapsed : public mongrel::MongrelModel {
         ld += log(std::abs(lii));
       }
       ld += log(c);
-      Rcout << "\t" << -delta*ld << std::endl;
       ll -= delta*ld;
       return ll;
     }

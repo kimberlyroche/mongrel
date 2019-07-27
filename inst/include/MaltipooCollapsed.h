@@ -50,10 +50,8 @@ class MaltipooCollapsed : public Numer::MFuncGrad
     Eigen::ArrayXd m;
     Eigen::RowVectorXd n;
     MatrixXd S;  // I_D-1 + KEAE'
-    // Eigen::ColPivHouseholderQR<MatrixXd> Sdec;
-    // Eigen::ColPivHouseholderQR<MatrixXd> Ainvdec;
-    Eigen::PartialPivLU<MatrixXd> Sdec;
-    Eigen::PartialPivLU<MatrixXd> Ainvdec;
+    Eigen::ColPivHouseholderQR<MatrixXd> Sdec;
+    Eigen::ColPivHouseholderQR<MatrixXd> Ainvdec;
     MatrixXd E;  // eta-ThetaX
     ArrayXXd O;  // exp{eta}
     // only needed for gradient and hessian
@@ -93,9 +91,12 @@ class MaltipooCollapsed : public Numer::MFuncGrad
       E = eta - ThetaX;
       
       Ainv = MatrixXd::Identity(N, N);
+      // Rcout << "Values:" << std::endl;
       for (int i=0; i<P; i++){
+        // Rcout << "\t" << exp(ell(i)) << std::endl;
         Ainv += exp(ell(i))*XTUX.middleRows(N*i, N);
       }
+      //Eigen::FullPivLU<MatrixXd> lu(Ainv);
       Ainvdec.compute(Ainv);
       A = Ainvdec.inverse(); 
         
@@ -114,6 +115,7 @@ class MaltipooCollapsed : public Numer::MFuncGrad
       rho = rhovec; // probably could be done in one line rather than 2 (above)
       C.noalias() = A*E.transpose();
       R.noalias() = Sdec.solve(K); // S^{-1}K
+      // M.noalias() = Ainv*E.transpose()*R*E*Ainv;
       M.noalias() = A*E.transpose()*R*E*A;
     }
     
@@ -121,47 +123,32 @@ class MaltipooCollapsed : public Numer::MFuncGrad
     double calcLogLik(const Ref<const VectorXd>& etavec){
       const Map<const MatrixXd> eta(etavec.data(), D-1, N);
       double ll=0.0;
-      // start with multinomial ll
       double p1 = (Y.topRows(D-1)*eta.array()).sum() - n*m.log().matrix();
+      double p2 = -delta*Sdec.logAbsDeterminant();
+      double p3 = -0.5*(D-1)*Ainvdec.logAbsDeterminant(); // repeated can speed up in future
+      // start with multinomial ll
       ll += p1;
-      // Rcout << "LL update:" << std::endl << "\t" << p1 << std::endl;
-      double ld = 0.0;
-      double c = Sdec.permutationP().determinant();
-      VectorXd diagLU = Sdec.matrixLU().diagonal();
-      for (unsigned i = 0; i < diagLU.rows(); ++i) {
-        const double& lii = diagLU(i);
-        if (lii < 0.0) c *= -1;
-        ld += log(std::abs(lii));
-      }
-      ld += log(c);
-      // Rcout << "\t" << -delta*ld << std::endl;
-      ll += -delta*ld;
-      ld = 0.0;
-      c = Ainvdec.permutationP().determinant();
-      diagLU = Ainvdec.matrixLU().diagonal();
-      for (unsigned i = 0; i < diagLU.rows(); ++i) {
-        const double& lii = diagLU(i);
-        if (lii < 0.0) c *= -1;
-        ld += log(std::abs(lii));
-      }
-      ld += log(c);
-      // Rcout << "\t" << -0.5*(D-1)*ld << std::endl;
-      ll -= 0.5*(D-1)*ld;
+      // Now compute collapsed prior ll
+      ll += p2;
+      ll += p3;
+      // Rcout << "LL:" << std::endl << "\t" << p1 << std::endl << "\t" << p2 << std::endl << "\t" << p3 << std::endl;
       return ll;
     }
     
     // Must have called updateWithEtaLL and then updateWithEtaGH first 
     VectorXd calcGrad(const Ref<const VectorXd>& ell){ 
       // For Multinomial
-      MatrixXd g = (Y.topRows(D-1) - (rhomat.array().rowwise()*n.array())).matrix();
+      MatrixXd g = (Y.topRows(D-1)  - (rhomat.array().rowwise()*n.array())).matrix();
       // For MatrixVariate T
       g.noalias() += -delta*(R + R.transpose())*C.transpose();
+      // Rcout << "Grad:" << std::endl << "\t" << g(1,1) << std::endl;
       Map<VectorXd> eg(g.data(), g.size()); 
       VectorXd sg(P);
       for (int i=0; i<P; i++){
         sg(i) = delta*(M.array()*XTUX.middleRows(N*i, N).array()).sum();
         sg(i) -= 0.5*(D-1)*(A.array()*XTUX.middleRows(N*i,N).array()).sum();
         sg(i) = exp(ell(i))*sg(i);
+        // Rcout << "\t" << sg(i) << std::endl;
       }
       VectorXd grad(N*(D-1)+P);
       grad << eg, sg;
