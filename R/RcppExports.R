@@ -35,12 +35,22 @@ conjugateLinearModel <- function(Y, X, Theta, Gamma, Xi, upsilon, n_samples = 20
     .Call('_stray_conjugateLinearModel', PACKAGE = 'stray', Y, X, Theta, Gamma, Xi, upsilon, n_samples)
 }
 
-optimLabraduckCollapsed <- function(Y, upsilon, Xi, F, G, W, M0, C0, observations, init, gamma_scale = 0, W_scale = 0, n_samples = 2000L, calcGradHess = TRUE, b1 = 0.9, b2 = 0.99, step_size = 0.003, epsilon = 10e-7, eps_f = 1e-10, eps_g = 1e-4, max_iter = 10000L, verbose = FALSE, verbose_rate = 10L, decomp_method = "cholesky", optim_method = "adam", eigvalthresh = 0, jitter = 0, multDirichletBoot = -1.0, useSylv = TRUE, ncores = -1L) {
-    .Call('_stray_optimLabraduckCollapsed', PACKAGE = 'stray', Y, upsilon, Xi, F, G, W, M0, C0, observations, init, gamma_scale, W_scale, n_samples, calcGradHess, b1, b2, step_size, epsilon, eps_f, eps_g, max_iter, verbose, verbose_rate, decomp_method, optim_method, eigvalthresh, jitter, multDirichletBoot, useSylv, ncores)
+#' @rdname loglikMaltipooCollapsed
+#' @export
+loglikMaltipooCollapsed <- function(Y, upsilon, Theta, X, K, U, eta, ell, sylv = FALSE) {
+    .Call('_stray_loglikMaltipooCollapsed', PACKAGE = 'stray', Y, upsilon, Theta, X, K, U, eta, ell, sylv)
 }
 
-uncollapseLabraduck <- function(eta, F, G, W, gamma_scale, W_scale, upsilon, Xi, M0, C0, observations, seed, ret_mean = FALSE, apply_smoother = FALSE, ncores = -1L) {
-    .Call('_stray_uncollapseLabraduck', PACKAGE = 'stray', eta, F, G, W, gamma_scale, W_scale, upsilon, Xi, M0, C0, observations, seed, ret_mean, apply_smoother, ncores)
+#' @rdname gradMaltipooCollapsed
+#' @export
+gradMaltipooCollapsed <- function(Y, upsilon, Theta, X, K, U, eta, ell, sylv = FALSE) {
+    .Call('_stray_gradMaltipooCollapsed', PACKAGE = 'stray', Y, upsilon, Theta, X, K, U, eta, ell, sylv)
+}
+
+#' @rdname hessMaltipooCollapsed
+#' @export
+hessMaltipooCollapsed <- function(Y, upsilon, Theta, X, K, U, eta, ell, sylv = FALSE) {
+    .Call('_stray_hessMaltipooCollapsed', PACKAGE = 'stray', Y, upsilon, Theta, X, K, U, eta, ell, sylv)
 }
 
 #' Function to Optimize the Collapsed Maltipoo Model
