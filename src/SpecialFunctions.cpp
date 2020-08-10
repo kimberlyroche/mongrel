@@ -14,6 +14,8 @@ using Eigen::ArrayXXd;
 using Eigen::Map;
 
 //' Log of Multivarate Gamma Function - Gamma_p(a)
+//' @param a defined by Gamma_p(a)
+//' @param p defined by Gamma_p(a)
 //' @references https://en.wikipedia.org/wiki/Multivariate_gamma_function
 // [[Rcpp::export]]
 double lmvgamma(double a, int p){
@@ -27,6 +29,8 @@ double lmvgamma(double a, int p){
 }
 
 //' Derivative of Log of Multivariate Gamma Function - Gamma_p(a)
+//' @param a defined by Gamma_p(a)
+//' @param p defined by Gamma_p(a)
 //' @references https://en.wikipedia.org/wiki/Multivariate_gamma_function
 // [[Rcpp::export]]
 double lmvgamma_deriv(double a, int p){

@@ -56,7 +56,6 @@
 #'  \code{\link[=coef.pibblefit]{coef}},  
 #'  \code{\link[=as.list.pibblefit]{as.list}},  
 #'  \code{\link[=predict.pibblefit]{predict}}, 
-#'  \code{\link[=model.matrix.pibblefit]{model.matrix}},
 #'  \code{\link[=name.pibblefit]{name}}, and
 #'  \code{\link[=sample_prior.pibblefit]{sample_prior}}
 #'  \code{\link{name_dims}}
@@ -144,6 +143,7 @@ pibble <- function(Y=NULL, X=NULL, upsilon=NULL, Theta=NULL, Gamma=NULL, Xi=NULL
   optim_method <- args_null("optim_method", args, "lbfgs")
   useSylv <- args_null("useSylv", args, TRUE)
   ncores <- args_null("ncores", args, -1)
+  seed <- args_null("seed", args, sample(1:2^15, 1))
   
 
   ## precomputation ## 
@@ -159,7 +159,7 @@ pibble <- function(Y=NULL, X=NULL, upsilon=NULL, Theta=NULL, Gamma=NULL, Xi=NULL
                                 eps_g, max_iter, verbose, verbose_rate, 
                                 decomp_method, optim_method, eigvalthresh, 
                                 jitter, multDirichletBoot, 
-                                useSylv, ncores)
+                                useSylv, ncores, seed)
   timerc <- parse_timer_seconds(fitc$Timer)
   
 
@@ -183,7 +183,7 @@ pibble <- function(Y=NULL, X=NULL, upsilon=NULL, Theta=NULL, Gamma=NULL, Xi=NULL
     ret_mean <- args_null("ret_mean", args, FALSE)
   }
   
-  seed <- args_null("seed", args, sample(1:2^15, 1))
+  seed <- seed + sample(1:2^15, 1)
   ## uncollapse collapsed model ##
   fitu <- uncollapsePibble(fitc$Samples, X, Theta, Gamma, Xi, upsilon, 
                                      ret_mean=ret_mean, ncores=ncores, seed=seed)

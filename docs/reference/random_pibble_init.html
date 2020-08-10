@@ -8,21 +8,29 @@
 
 <title>Provide random initialization for pibble model — random_pibble_init • stray</title>
 
+
 <!-- jquery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
+
+<!-- bootstrap-toc -->
+<link rel="stylesheet" href="../bootstrap-toc.css">
+<script src="../bootstrap-toc.js"></script>
 
 <!-- Font Awesome icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous" />
 
 <!-- clipboard.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script>
 
-<!-- sticky kit -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script>
+<!-- headroom.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
@@ -30,12 +38,12 @@
 
 
 
-<meta property="og:title" content="Provide random initialization for pibble model — random_pibble_init" />
 
+<meta property="og:title" content="Provide random initialization for pibble model — random_pibble_init" />
 <meta property="og:description" content="Randomly initializes based on ALR transform of counts
 plus random pseudocounts uniformily distributed between 
 0 and 1." />
-<meta name="twitter:card" content="summary" />
+
 
 
 
@@ -49,9 +57,10 @@ plus random pseudocounts uniformily distributed between
 <![endif]-->
 
 
+
   </head>
 
-  <body>
+  <body data-spy="scroll" data-target="#toc">
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -65,7 +74,7 @@ plus random pseudocounts uniformily distributed between
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">stray</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.11</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.13</span>
       </span>
     </div>
 
@@ -88,6 +97,9 @@ plus random pseudocounts uniformily distributed between
       <a href="../articles/non-linear-models.html">Non-Linear Modeling with stray::basset</a>
     </li>
     <li>
+      <a href="../articles/orthus.html">Joint Modeling  (e.g., Multiomics) with Stray::Orthus</a>
+    </li>
+    <li>
       <a href="../articles/picking_priors.html">Tips on Specifying Priors</a>
     </li>
   </ul>
@@ -106,15 +118,20 @@ plus random pseudocounts uniformily distributed between
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="https://github.com/jsilve24/RcppCoDA">RcppCoDA</a>
+    </li>
+    <li>
       <a href="https://jsilve24.github.io/driver/">driver</a>
     </li>
     <li>
       <a href="https://bioconductor.org/packages/release/bioc/html/philr.html">philr</a>
     </li>
+    <li>
+      <a href="https://cran.r-project.org/package=RcppHungarian">RcppHungarian</a>
+    </li>
   </ul>
 </li>
       </ul>
-      
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://twitter.com/inschool4life">
@@ -135,6 +152,7 @@ plus random pseudocounts uniformily distributed between
 </div><!--/.navbar -->
 
       
+
       </header>
 
 <div class="row">
@@ -146,15 +164,13 @@ plus random pseudocounts uniformily distributed between
     </div>
 
     <div class="ref-description">
-    
     <p>Randomly initializes based on ALR transform of counts
 plus random pseudocounts uniformily distributed between 
 0 and 1.</p>
-    
     </div>
 
     <pre class="usage"><span class='fu'>random_pibble_init</span>(<span class='no'>Y</span>)</pre>
-    
+
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
@@ -163,54 +179,45 @@ plus random pseudocounts uniformily distributed between
       <td><p>matrix (D x N) of counts</p></td>
     </tr>
     </table>
-    
+
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
     <p>(D-1) x N matrix</p>
-    
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
     <p>Notation: <code>N</code> is number of samples and
 <code>D</code> is number of multinomial categories</p>
-    
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='no'>Y</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://www.rdocumentation.org/packages/base/topics/matrix'>matrix</a></span>(<span class='fu'><a href='https://www.rdocumentation.org/packages/base/topics/sample'>sample</a></span>(<span class='fl'>1</span>:<span class='fl'>100</span>, <span class='fl'>100</span>), <span class='fl'>10</span>, <span class='fl'>10</span>)
-<span class='fu'>random_pibble_init</span>(<span class='no'>Y</span>)</div><div class='output co'>#&gt;              [,1]        [,2]        [,3]       [,4]        [,5]       [,6]
-#&gt;  [1,] -2.09826445  0.88531473 -1.30372494 -0.5882382  0.05973214 -0.2111874
-#&gt;  [2,] -0.18470733  0.61990934 -1.27249868 -0.2515906 -0.21061782 -1.2355682
-#&gt;  [3,] -0.33894858  0.04472266 -0.34768575 -0.5735067  0.37881564 -1.9589151
-#&gt;  [4,]  0.26298594  0.20327414  0.06091647 -1.3600359  0.14786803 -0.5654040
-#&gt;  [5,]  0.08522398 -0.27047533 -0.13648772  0.2369855  0.08537134 -2.8594807
-#&gt;  [6,]  0.15173136 -0.77365757 -1.06399962  0.1572791  0.01055715 -1.0200058
-#&gt;  [7,] -0.71578613  0.78829673 -0.24485924  0.2704599 -0.52811855 -1.2668447
-#&gt;  [8,] -1.13832310 -0.73975983 -0.12695642 -0.3521450  0.44275704 -0.2206490
-#&gt;  [9,] -0.05236464 -2.43771262 -0.61716516 -3.4077168  0.48015052 -0.1354713
-#&gt;              [,7]     [,8]       [,9]       [,10]
-#&gt;  [1,]  0.01285488 1.434970  0.3453675 -0.15203596
-#&gt;  [2,]  0.48122670 1.845451  0.6199732  0.43043752
-#&gt;  [3,] -0.88511297 1.735517 -1.2176522 -1.54491933
-#&gt;  [4,] -0.31938667 2.276046 -0.7405710 -0.73942815
-#&gt;  [5,] -1.34070294 2.585650  1.0755786 -2.39634251
-#&gt;  [6,]  0.54538578 1.177561 -0.5104871 -1.23666783
-#&gt;  [7,] -3.75261980 1.788733  1.5328050  0.31953552
-#&gt;  [8,]  0.53167255 2.301594 -0.1385105  0.09713733
-#&gt;  [9,]  0.25801349 2.631811  1.0910697 -1.56718363</div></pre>
+    <pre class="examples"><div class='input'><span class='no'>Y</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/matrix.html'>matrix</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/sample.html'>sample</a></span>(<span class='fl'>1</span>:<span class='fl'>100</span>, <span class='fl'>100</span>), <span class='fl'>10</span>, <span class='fl'>10</span>)
+<span class='fu'>random_pibble_init</span>(<span class='no'>Y</span>)</div><div class='output co'>#&gt;              [,1]       [,2]       [,3]        [,4]        [,5]      [,6]
+#&gt;  [1,]  1.08148692 -1.8510595  0.3068992 -0.29418259 -0.51140683 2.8371918
+#&gt;  [2,]  1.00944924 -0.1756818 -0.1266309 -1.38139373 -0.88051181 1.2677315
+#&gt;  [3,] -0.26860309  0.2194223  0.6677155 -0.32189348 -2.93549212 2.3998147
+#&gt;  [4,]  0.11723758 -1.0520593 -1.3159870 -0.20385468  0.14564165 0.8408587
+#&gt;  [5,]  1.22365591  0.7755404 -1.0762734 -0.53573480 -0.20643899 0.7041391
+#&gt;  [6,]  0.95312547  0.5367709  0.7235215 -0.80394031 -0.52691156 2.8735546
+#&gt;  [7,] -0.19745168  0.1567910  0.3623839  0.15236415 -1.58116434 2.4769216
+#&gt;  [8,] -0.07002981  0.8025390  0.8516511 -3.17253229  0.03099507 2.5786081
+#&gt;  [9,] -0.10503160  0.1380126 -1.1669521  0.01799195 -1.32444186 2.1994325
+#&gt;             [,7]       [,8]       [,9]      [,10]
+#&gt;  [1,]  1.1274454  0.3146848 -0.6946108  0.3701905
+#&gt;  [2,]  1.4676757  0.5069014 -0.7311647 -3.1043483
+#&gt;  [3,]  2.2025627  0.3851819 -2.0273326 -3.3905880
+#&gt;  [4,]  1.1150827  0.3973763  0.2760187  0.7650290
+#&gt;  [5,]  2.0227500 -0.1561838  0.3284022  0.2670050
+#&gt;  [6,]  1.7082221  0.3008424 -0.5067853 -0.6885151
+#&gt;  [7,]  1.9736095 -0.3221119 -0.8895008  0.3169154
+#&gt;  [8,]  1.3160673  0.1074681  0.3994328  0.7207511
+#&gt;  [9,] -0.2679709 -1.1144212  0.2375592 -0.1586304</div></pre>
   </div>
-  <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
-    <h2>Contents</h2>
-    <ul class="nav nav-pills nav-stacked">
-      <li><a href="#arguments">Arguments</a></li>
-      
-      <li><a href="#value">Value</a></li>
-
-      <li><a href="#details">Details</a></li>
-      
-      <li><a href="#examples">Examples</a></li>
-    </ul>
-
+  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
+    <nav id="toc" data-toggle="toc" class="sticky-top">
+      <h2 data-toc-skip>Contents</h2>
+    </nav>
   </div>
 </div>
+
 
       <footer>
       <div class="copyright">
@@ -218,13 +225,16 @@ plus random pseudocounts uniformily distributed between
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.3.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
 </div>
+
       </footer>
    </div>
 
   
 
+
   </body>
 </html>
+
 

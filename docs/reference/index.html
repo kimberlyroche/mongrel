@@ -8,21 +8,29 @@
 
 <title>Function reference • stray</title>
 
+
 <!-- jquery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
+
+<!-- bootstrap-toc -->
+<link rel="stylesheet" href="../bootstrap-toc.css">
+<script src="../bootstrap-toc.js"></script>
 
 <!-- Font Awesome icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous" />
 
 <!-- clipboard.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script>
 
-<!-- sticky kit -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script>
+<!-- headroom.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
@@ -30,7 +38,9 @@
 
 
 
+
 <meta property="og:title" content="Function reference" />
+
 
 
 
@@ -44,9 +54,10 @@
 <![endif]-->
 
 
+
   </head>
 
-  <body>
+  <body data-spy="scroll" data-target="#toc">
     <div class="container template-reference-index">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -60,7 +71,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">stray</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.11</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.13</span>
       </span>
     </div>
 
@@ -83,6 +94,9 @@
       <a href="../articles/non-linear-models.html">Non-Linear Modeling with stray::basset</a>
     </li>
     <li>
+      <a href="../articles/orthus.html">Joint Modeling  (e.g., Multiomics) with Stray::Orthus</a>
+    </li>
+    <li>
       <a href="../articles/picking_priors.html">Tips on Specifying Priors</a>
     </li>
   </ul>
@@ -101,15 +115,20 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="https://github.com/jsilve24/RcppCoDA">RcppCoDA</a>
+    </li>
+    <li>
       <a href="https://jsilve24.github.io/driver/">driver</a>
     </li>
     <li>
       <a href="https://bioconductor.org/packages/release/bioc/html/philr.html">philr</a>
     </li>
+    <li>
+      <a href="https://cran.r-project.org/package=RcppHungarian">RcppHungarian</a>
+    </li>
   </ul>
 </li>
       </ul>
-      
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://twitter.com/inschool4life">
@@ -130,6 +149,7 @@
 </div><!--/.navbar -->
 
       
+
       </header>
 
 <div class="row">
@@ -153,18 +173,29 @@
           <p class="section-desc"><p>Main interface for fitting models and returning model objects</p></p>
         </th>
       </tr>
+      
+      
+    </tbody><tbody>
+      
+      
       <tr>
         
         <td>
-          <p><code><a href="pibble_fit.html">refit(<i>&lt;pibblefit&gt;</i>)</a></code> <code><a href="pibble_fit.html">pibble()</a></code> <code><a href="pibble_fit.html">refit(<i>&lt;pibblefit&gt;</i>)</a></code> </p>
+          <p><code><a href="pibble_fit.html">pibble()</a></code> <code><a href="pibble_fit.html">refit(<i>&lt;pibblefit&gt;</i>)</a></code> </p>
         </td>
         <td><p>Interface to fit pibble models</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="basset_fit.html">basset()</a></code> </p>
+          <p><code><a href="basset_fit.html">basset()</a></code> <code><a href="basset_fit.html">refit(<i>&lt;bassetfit&gt;</i>)</a></code> </p>
         </td>
         <td><p>Interface to fit basset models</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="orthus_fit.html">orthus()</a></code> </p>
+        </td>
+        <td><p>Interface to fit orthus models</p></td>
       </tr><tr>
         
         <td>
@@ -179,6 +210,11 @@
           <p class="section-desc"><p>Low level interfaces for fitting models</p></p>
         </th>
       </tr>
+      
+      
+    </tbody><tbody>
+      
+      
       <tr>
         
         <td>
@@ -209,6 +245,18 @@
           <p><code><a href="loglikPibbleCollapsed.html">loglikPibbleCollapsed()</a></code> <code><a href="loglikPibbleCollapsed.html">gradPibbleCollapsed()</a></code> <code><a href="loglikPibbleCollapsed.html">hessPibbleCollapsed()</a></code> </p>
         </td>
         <td><p>Calculations for the Collapsed Pibble Model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="loglikMaltipooCollapsed.html">loglikMaltipooCollapsed()</a></code> <code><a href="loglikMaltipooCollapsed.html">gradMaltipooCollapsed()</a></code> <code><a href="loglikMaltipooCollapsed.html">hessMaltipooCollapsed()</a></code> </p>
+        </td>
+        <td><p>Calculations for the Collapsed Maltipoo Model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="kernels.html">SE()</a></code> <code><a href="kernels.html">LINEAR()</a></code> </p>
+        </td>
+        <td><p>Multivariate RBF Kernel</p></td>
       </tr>
     </tbody><tbody>
       <tr>
@@ -217,6 +265,11 @@
           <p class="section-desc"><p>Methods for working with model objects</p></p>
         </th>
       </tr>
+      
+      
+    </tbody><tbody>
+      
+      
       <tr>
         
         <td>
@@ -244,7 +297,7 @@
       </tr><tr>
         
         <td>
-          <p><code><a href="name_dims.html">names_covariates()</a></code> <code><a href="name_dims.html">names_samples()</a></code> <code><a href="name_dims.html">names_categories()</a></code> <code><a href="name_dims.html">names_coords()</a></code> <code><a href="name_dims.html">`names_covariates<-`()</a></code> <code><a href="name_dims.html">`names_samples<-`()</a></code> <code><a href="name_dims.html">`names_categories<-`()</a></code> </p>
+          <p><code><a href="name_dims.html">names_covariates()</a></code> <code><a href="name_dims.html">names_samples()</a></code> <code><a href="name_dims.html">names_categories()</a></code> <code><a href="name_dims.html">names_coords()</a></code> <code><a href="name_dims.html">`names_covariates&lt;-`()</a></code> <code><a href="name_dims.html">`names_samples&lt;-`()</a></code> <code><a href="name_dims.html">`names_categories&lt;-`()</a></code> </p>
         </td>
         <td><p>Generic method for getting and setting dimension names of fit object</p></td>
       </tr><tr>
@@ -307,6 +360,18 @@
           <p><code><a href="verify.html">verify()</a></code> </p>
         </td>
         <td><p>Generic method for verifying new objects</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="summary.pibblefit.html">summary(<i>&lt;pibblefit&gt;</i>)</a></code> </p>
+        </td>
+        <td><p>Summarise pibblefit object and print posterior quantiles</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="summary.orthusfit.html">summary(<i>&lt;orthusfit&gt;</i>)</a></code> </p>
+        </td>
+        <td><p>Summarise orthusfit object and print posterior quantiles</p></td>
       </tr>
     </tbody><tbody>
       <tr>
@@ -315,6 +380,11 @@
           <p class="section-desc"><p>Just that, mostly support other package functions</p></p>
         </th>
       </tr>
+      
+      
+    </tbody><tbody>
+      
+      
       <tr>
         
         <td>
@@ -336,6 +406,24 @@
       </tr><tr>
         
         <td>
+          <p><code><a href="orthus_sim.html">orthus_sim()</a></code> </p>
+        </td>
+        <td><p>Simulate simple orthus dataset and priors (for testing)</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="pibble_tidy_samples.html">pibble_tidy_samples()</a></code> </p>
+        </td>
+        <td><p>Convert pibble samples of Eta Lambda and Sigma to tidy format</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="orthus_tidy_samples.html">orthus_tidy_samples()</a></code> </p>
+        </td>
+        <td><p>Convert orthus samples of Eta Lambda and Sigma to tidy format</p></td>
+      </tr><tr>
+        
+        <td>
           <p><code><a href="store_coord.html">store_coord()</a></code> <code><a href="store_coord.html">reapply_coord()</a></code> </p>
         </td>
         <td><p>Holds information on coordinates system to later be reapplied</p></td>
@@ -353,6 +441,11 @@
           <p class="section-desc"><p>Fast, C++, mostly for internal use</p></p>
         </th>
       </tr>
+      
+      
+    </tbody><tbody>
+      
+      
       <tr>
         
         <td>
@@ -366,21 +459,42 @@
         </td>
         <td><p>Derivative of Log of Multivariate Gamma Function - Gamma_p(a)</p></td>
       </tr>
+    </tbody><tbody>
+      <tr>
+        <th colspan="2">
+          <h2 id="section-datasets" class="hasAnchor"><a href="#section-datasets" class="anchor"></a>Datasets</h2>
+          <p class="section-desc"><p>Example Datasets</p></p>
+        </th>
+      </tr>
+      
+      
+    </tbody><tbody>
+      
+      
+      <tr>
+        
+        <td>
+          <p><code><a href="mallard.html">mallard</a></code> </p>
+        </td>
+        <td><p>Data from Silverman et al. (2018) Microbiome</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="mallard_family.html">mallard_family</a></code> </p>
+        </td>
+        <td><p>Data from Silverman et al. (2018) Microbiome</p></td>
+      </tr>
     </tbody>
     </table>
   </div>
 
-  <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
-    <h2>Contents</h2>
-    <ul class="nav nav-pills nav-stacked">
-      <li><a href="#section-main-model-functions">Main Model Functions</a></li>
-      <li><a href="#section-rcpp-model-interfaces">Rcpp Model Interfaces</a></li>
-      <li><a href="#section-object-methods">Object Methods</a></li>
-      <li><a href="#section-helpful-utility-methods">Helpful Utility Methods</a></li>
-      <li><a href="#section-utility-math-functions">Utility Math Functions</a></li>
-    </ul>
+  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
+    <nav id="toc" data-toggle="toc" class="sticky-top">
+      <h2 data-toc-skip>Contents</h2>
+    </nav>
   </div>
 </div>
+
 
       <footer>
       <div class="copyright">
@@ -388,13 +502,16 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.3.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
 </div>
+
       </footer>
    </div>
 
   
 
+
   </body>
 </html>
+
 

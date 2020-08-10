@@ -45,8 +45,6 @@ using Eigen::VectorXd;
 //' @param optim_method (default:"adam") or "lbfgs"
 //' @param eigvalthresh threshold for negative eigenvalues in 
 //'   decomposition of negative inverse hessian (should be <=0)
-//' @param no_error if true will throw hessian warning rather than error if 
-//'   not positive definite. 
 //' @param jitter (default: 0) if >=0 then adds that factor to diagonal of Hessian 
 //' before decomposition (to improve matrix conditioning)
 //' @param multDirichletBoot if >0 (overrides laplace approximation) and samples
@@ -55,6 +53,7 @@ using Eigen::VectorXd;
 //'   to speed up calculation of log-likelihood and gradients. 
 //' @param ncores (default:-1) number of cores to use, if ncores==-1 then 
 //' uses default from OpenMP typically to use all available cores. 
+//' @param seed (random seed for Laplace approximation -- integer)
 //'  
 //' @details Notation: Let Z_j denote the J-th row of a matrix Z.
 //' Model:
@@ -134,7 +133,8 @@ List optimPibbleCollapsed(const Eigen::ArrayXXd Y,
                double jitter=0,
                double multDirichletBoot = -1.0, 
                bool useSylv = true, 
-               int ncores=-1){  
+               int ncores=-1, 
+               long seed=-1){  
   #ifdef STRAY_USE_PARALLEL 
     Eigen::initParallel();
     if (ncores > 0) Eigen::setNbThreads(ncores);
@@ -181,7 +181,7 @@ List optimPibbleCollapsed(const Eigen::ArrayXXd Y,
     // "Multinomial-Dirichlet" option
     if (multDirichletBoot>=0.0){
       timer.step("MultDirichletBoot_start");
-      if (verbose) Rcout << "Preforming Multinomial Dirichlet Bootstrap" << std::endl;
+      if (verbose) Rcout << "Performing Multinomial Dirichlet Bootstrap" << std::endl;
       MatrixXd samp = MultDirichletBoot::MultDirichletBoot(n_samples, etamat, Y, 
                                                            multDirichletBoot);
       timer.step("MultDirichletBoot_stop");
@@ -218,7 +218,8 @@ List optimPibbleCollapsed(const Eigen::ArrayXXd Y,
       status = lapap::LaplaceApproximation(samp, eta, hess, 
                                            decomp_method, eigvalthresh, 
                                            jitter, 
-                                           logInvNegHessDet);
+                                           logInvNegHessDet, 
+                                           seed);
       timer.step("LaplaceApproximation_stop");
       if (status != 0){
         Rcpp::warning("Decomposition of Hessian Failed, returning MAP Estimate only");
